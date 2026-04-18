@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sentra — Family Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..800,0..100&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:      #F3EDDD;
+    --cream-deep: #EBE2CA;
+    --cream-soft: #F8F4E8;
+    --ink:        #1A2A22;
+    --ink-soft:   #3C4A42;
+    --moss:       #2C5A3F;
+    --moss-deep:  #1B3A27;
+    --moss-light: #D9E5D1;
+    --terra:      #C85A2E;
+    --terra-soft: #E8C8B4;
+    --paper:      #FBF7EB;
+    --line:       rgba(26,42,34,0.14);
+    --line-soft:  rgba(26,42,34,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--cream-deep);
+    color: var(--ink);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  .app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  @media (max-width: 900px) { .app { grid-template-columns: 1fr; } }
+
+  /* ── Sidebar ─────────────────────────────────────────────── */
+  .sidebar {
+    background: var(--cream);
+    border-right: 0.5px solid var(--line);
+    display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  @media (max-width: 900px) { .sidebar { display: none; } }
+
+  .sidebar-logo {
+    padding: 28px 24px 20px;
+    font-family: 'Fraunces', serif;
+    font-size: 22px; font-weight: 500;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 0.5px solid var(--line-soft);
+  }
+  .sidebar-logo svg { flex-shrink: 0; }
+
+  .sidebar-profile {
+    padding: 20px 24px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 0.5px solid var(--line-soft);
+  }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--moss); color: var(--cream-soft);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; flex-shrink: 0;
+  }
+  .profile-name { font-size: 13px; font-weight: 500; }
+  .profile-plan { font-size: 11px; color: var(--ink-soft); text-transform: capitalize; }
+
+  .sidebar-nav { padding: 16px 16px; flex: 1; }
+  .nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--ink-soft); padding: 0 8px; margin: 20px 0 8px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    font-size: 13px; color: var(--ink-soft);
+    cursor: pointer; transition: background 0.15s, color 0.15s;
+    margin-bottom: 2px; text-decoration: none;
+    border: none; background: none; width: 100%; text-align: left; font-family: inherit;
+  }
+  .nav-item:hover { background: var(--cream-deep); color: var(--ink); }
+  .nav-item.active { background: var(--moss); color: var(--cream-soft); }
+  .nav-item svg { flex-shrink: 0; opacity: 0.7; }
+  .nav-item.active svg { opacity: 1; }
+
+  .nav-child-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px 8px 34px; border-radius: 10px;
+    font-size: 13px; color: var(--ink-soft);
+    cursor: pointer; transition: background 0.15s;
+    margin-bottom: 2px;
+  }
+  .nav-child-item:hover { background: var(--cream-deep); color: var(--ink); }
+  .child-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--moss); flex-shrink: 0; }
+
+  .sidebar-footer {
+    padding: 16px;
+    border-top: 0.5px solid var(--line-soft);
+  }
+  .logout-btn {
+    width: 100%; padding: 10px 12px;
+    border-radius: 10px; font-size: 13px; color: var(--ink-soft);
+    background: none; border: none; cursor: pointer;
+    text-align: left; font-family: inherit;
+    display: flex; align-items: center; gap: 10px;
+    transition: background 0.15s;
+  }
+  .logout-btn:hover { background: var(--cream-deep); color: var(--terra); }
+
+  /* ── Main content ─────────────────────────────────────────── */
+  .main { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .topbar {
+    background: rgba(243, 237, 221, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--line-soft);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; letter-spacing: -0.3px; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .topbar-date { font-size: 12px; color: var(--ink-soft); }
+  .alert-badge {
+    background: var(--terra); color: white;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 7px; border-radius: 100px;
+    min-width: 20px; text-align: center;
+    display: none;
+  }
+
+  .content { padding: 32px; flex: 1; max-width: 1100px; }
+
+  /* ── Stat cards ───────────────────────────────────────────── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  @media (max-width: 700px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+  .stat-card {
+    background: var(--paper);
+    border-radius: 20px;
+    padding: 20px 22px;
+    border: 0.5px solid var(--line-soft);
+  }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); margin-bottom: 10px; }
+  .stat-num { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 400; line-height: 1; letter-spacing: -1px; }
+  .stat-sub { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+  .stat-card.alert-card .stat-num { color: var(--terra); }
+
+  /* ── Two-col grid ─────────────────────────────────────────── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Card ─────────────────────────────────────────────────── */
+  .card {
+    background: var(--paper);
+    border-radius: 20px;
+    border: 0.5px solid var(--line-soft);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 20px 24px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .card-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; letter-spacing: -0.2px; }
+  .card-action { font-size: 12px; color: var(--moss); cursor: pointer; font-weight: 500; background: none; border: none; font-family: inherit; }
+  .card-action:hover { text-decoration: underline; }
+
+  /* ── Alert feed ───────────────────────────────────────────── */
+  .alert-feed { padding: 0 24px 24px; }
+  .alert-row {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 14px 0;
+    border-top: 0.5px solid var(--line-soft);
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .alert-row:first-child { border-top: none; }
+  .alert-row:hover { opacity: 0.8; }
+  .alert-row.read { opacity: 0.5; }
+  .alert-pill {
+    font-size: 10px; padding: 3px 9px; border-radius: 100px;
+    text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; flex-shrink: 0; margin-top: 2px;
+  }
+  .pill-critical { background: #F5DBCC; color: #8C3B18; }
+  .pill-warn     { background: #F5DBCC; color: #8C3B18; }
+  .pill-info     { background: #D6E2EE; color: #1F4261; }
+  .pill-ok       { background: var(--moss-light); color: var(--moss-deep); }
+  .alert-body { flex: 1; }
+  .alert-title-text { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .alert-meta { font-size: 11px; color: var(--ink-soft); }
+  .empty-state { padding: 32px 24px; text-align: center; color: var(--ink-soft); font-size: 14px; }
+
+  /* ── Children list ────────────────────────────────────────── */
+  .children-list { padding: 0 24px 24px; }
+  .child-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0; border-top: 0.5px solid var(--line-soft);
+  }
+  .child-row:first-child { border-top: none; }
+  .child-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--moss-light); color: var(--moss-deep);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 600; flex-shrink: 0;
+    font-family: 'Fraunces', serif;
+  }
+  .child-info { flex: 1; }
+  .child-name { font-size: 14px; font-weight: 500; }
+  .child-devices { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .child-score {
+    font-family: 'Fraunces', serif;
+    font-size: 22px; font-weight: 400; color: var(--moss);
+  }
+  .add-child-btn {
+    width: 100%; padding: 12px; text-align: center;
+    font-size: 13px; color: var(--moss); font-weight: 500;
+    background: none; border: none; cursor: pointer; font-family: inherit;
+    border-top: 0.5px solid var(--line-soft);
+    transition: background 0.15s;
+  }
+  .add-child-btn:hover { background: var(--cream-deep); }
+
+  /* ── Auth screens ─────────────────────────────────────────── */
+  .auth-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--cream); padding: 20px;
+  }
+  .auth-box {
+    background: var(--paper); border-radius: 28px;
+    padding: 48px 44px; width: 100%; max-width: 440px;
+    box-shadow: 0 30px 60px -20px rgba(26,42,34,0.18);
+  }
+  @media (max-width: 500px) { .auth-box { padding: 32px 24px; } }
+  .auth-logo {
+    font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 32px;
+  }
+  .auth-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 400; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .auth-title em { font-style: italic; font-weight: 300; color: var(--moss); }
+  .auth-sub { font-size: 14px; color: var(--ink-soft); margin-bottom: 28px; }
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .auth-input {
+    width: 100%; padding: 14px 18px; border: 1px solid var(--line);
+    border-radius: 100px; font-size: 15px; font-family: inherit;
+    background: var(--cream-soft); color: var(--ink); outline: none;
+    transition: border-color 0.2s;
+  }
+  .auth-input:focus { border-color: var(--moss); }
+  .auth-submit {
+    width: 100%; padding: 15px; background: var(--ink); color: var(--cream-soft);
+    border: none; border-radius: 100px; font-size: 15px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background 0.2s;
+  }
+  .auth-submit:hover:not(:disabled) { background: var(--moss-deep); }
+  .auth-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+  .auth-switch { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 4px; }
+  .auth-switch a { color: var(--moss); cursor: pointer; font-weight: 500; }
+  .auth-error { font-size: 13px; color: var(--terra); background: #F5DBCC; padding: 10px 16px; border-radius: 12px; display: none; }
+
+  /* ── Modal ────────────────────────────────────────────────── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(26,42,34,0.5); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: var(--paper); border-radius: 24px; padding: 36px 32px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 30px 60px -15px rgba(26,42,34,0.25);
+    position: relative;
+  }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 0.5px solid var(--line); background: transparent;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--ink-soft);
+  }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 400; letter-spacing: -0.3px; margin-bottom: 20px; }
+  .modal-form { display: flex; flex-direction: column; gap: 12px; }
+  .modal-input {
+    width: 100%; padding: 13px 18px; border: 1px solid var(--line);
+    border-radius: 100px; font-size: 14px; font-family: inherit;
+    background: var(--cream-soft); color: var(--ink); outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal-input:focus { border-color: var(--moss); }
+  .modal-submit {
+    width: 100%; padding: 14px; background: var(--ink); color: var(--cream-soft);
+    border: none; border-radius: 100px; font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background 0.2s;
+  }
+  .modal-submit:hover { background: var(--moss-deep); }
+
+  /* ── Toast ────────────────────────────────────────────────── */
+  #toast-container {
+    position: fixed; bottom: 28px; right: 28px; z-index: 500;
+    display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+  }
+  .toast {
+    pointer-events: all; padding: 13px 20px; border-radius: 100px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 8px 24px -8px rgba(26,42,34,0.25);
+  }
+  .toast-success { background: var(--moss); color: var(--cream-soft); }
+  .toast-error   { background: var(--terra); color: var(--cream-soft); }
+
+  /* ── Skeleton loading ─────────────────────────────────────── */
+  @keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--cream-deep) 25%, var(--cream) 50%, var(--cream-deep) 75%);
+    background-size: 400px 100%; animation: shimmer 1.4s infinite;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Auth screen (shown when logged out) -->
+<div id="auth-screen" class="auth-screen" style="display:none">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <svg width="20" height="24" viewBox="0 0 22 26" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z" fill="#2C5A3F" stroke="#1A2A22" stroke-width="1"/>
+        <circle cx="11" cy="11" r="2.5" fill="#F3EDDD"/>
+      </svg>
+      Sentra
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+
+    <!-- Login form -->
+    <div id="login-view">
+      <h1 class="auth-title">Welcome <em>back.</em></h1>
+      <p class="auth-sub">Sign in to your family dashboard.</p>
+      <form class="auth-form" id="login-form">
+        <input type="email" name="email" class="auth-input" placeholder="Email address" required autocomplete="email">
+        <input type="password" name="password" class="auth-input" placeholder="Password" required autocomplete="current-password">
+        <button type="submit" class="auth-submit">Sign in</button>
+        <p class="auth-switch">No account? <a id="go-register">Create one free →</a></p>
+      </form>
+    </div>
+
+    <!-- Register form -->
+    <div id="register-view" style="display:none">
+      <h1 class="auth-title">Start protecting your <em>family.</em></h1>
+      <p class="auth-sub">Create your free Sentra account.</p>
+      <form class="auth-form" id="register-form">
+        <input type="text" name="name" class="auth-input" placeholder="Your name" required autocomplete="name">
+        <input type="email" name="email" class="auth-input" placeholder="Email address" required autocomplete="email">
+        <input type="password" name="password" class="auth-input" placeholder="Password (min 8 chars)" required autocomplete="new-password">
+        <button type="submit" class="auth-submit">Create account</button>
+        <p class="auth-switch">Already have an account? <a id="go-login">Sign in →</a></p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard app (shown when logged in) -->
+<div id="app" class="app" style="display:none">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="20" height="24" viewBox="0 0 22 26" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z" fill="#2C5A3F" stroke="#1A2A22" stroke-width="1"/>
+        <circle cx="11" cy="11" r="2.5" fill="#F3EDDD"/>
+      </svg>
+      Sentra
+    </div>
+    <div class="sidebar-profile">
+      <div class="avatar" id="sidebar-avatar">—</div>
+      <div>
+        <div class="profile-name" id="sidebar-name">—</div>
+        <div class="profile-plan" id="sidebar-plan">—</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active">
+        <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+        Overview
+      </div>
+      <div class="nav-section">Children</div>
+      <div id="sidebar-children"></div>
+      <div class="nav-section">Reports</div>
+      <div class="nav-item">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 2 h10 a1 1 0 0 1 1 1 v10 a1 1 0 0 1 -1 1 H3 a1 1 0 0 1 -1 -1 V3 a1 1 0 0 1 1 -1z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 6 h8 M4 9 h6 M4 12 h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Activity log
+      </div>
+      <div class="nav-item">
+        <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4 v4 l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+        Weekly report
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" id="logout-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M6 2 H3 a1 1 0 0 0 -1 1 v10 a1 1 0 0 0 1 1 h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 5 L14 8 L10 11 M14 8 H6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Sign out
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-greeting">Family overview</div>
+      <div class="topbar-right">
+        <span class="topbar-date" id="topbar-date"></span>
+        <span class="alert-badge" id="alert-badge">0</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Stats row -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Children</div>
+          <div class="stat-num" id="stat-children">—</div>
+          <div class="stat-sub">monitored</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Devices</div>
+          <div class="stat-num" id="stat-devices">—</div>
+          <div class="stat-sub">connected</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Signals</div>
+          <div class="stat-num" id="stat-signals">—</div>
+          <div class="stat-sub">this week</div>
+        </div>
+        <div class="stat-card alert-card">
+          <div class="stat-label">Alerts</div>
+          <div class="stat-num" id="stat-alerts">—</div>
+          <div class="stat-sub">need review</div>
+        </div>
+      </div>
+
+      <!-- Two-col: alerts + children -->
+      <div class="two-col">
+
+        <!-- Alert feed -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Recent alerts</span>
+            <button class="card-action" id="mark-all-read">Mark all read</button>
+          </div>
+          <div class="alert-feed" id="alert-feed">
+            <div class="empty-state">Loading alerts…</div>
+          </div>
+        </div>
+
+        <!-- Children -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Your children</span>
+          </div>
+          <div class="children-list" id="children-list">
+            <div class="empty-state">Loading…</div>
+          </div>
+          <button class="add-child-btn" id="add-child-btn">+ Add a child</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add child modal -->
+<div id="add-child-modal" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" id="modal-close">✕</button>
+    <h2 class="modal-title">Add a child</h2>
+    <form class="modal-form" id="add-child-form">
+      <input type="text" name="name" class="modal-input" placeholder="Child's name" required>
+      <input type="number" name="age" class="modal-input" placeholder="Age (optional)" min="1" max="17">
+      <button type="submit" class="modal-submit">Add child</button>
+    </form>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast-container"></div>
+
+<script type="module" src="/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(npx vite *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(pkill -f vite)",
+      "Bash(pkill -f \"node server\")",
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:3001/api/stats)",
+      "Bash(curl -s -X POST http://localhost:3001/api/waitlist -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"plan\":\"family\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/waitlist -H 'Content-Type: application/json' -d '{\"email\":\"bad-email\",\"plan\":\"family\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"Test Parent\",\"email\":\"parent@test.com\",\"password\":\"password123\",\"plan\":\"family\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"parent@test.com\",\"password\":\"password123\"}' -c /tmp/sentra-cookies.txt)"
+    ]
+  }
+}
