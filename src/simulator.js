@@ -134,7 +134,7 @@ function fireSignal(device, scenario, at = null) {
   const risk    = RISK_SCORE[scenario.type] ?? 20
   const level   = ALERT_LEVEL(risk)
   const payload = JSON.stringify(scenario.payload)
-  const ts      = at || new Date().toISOString().replace('T', ' ').slice(0, 19)
+  const ts      = at || new Date().toISOString()
 
   const { lastInsertRowid: sigId } = db
     .prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed, created_at) VALUES (?, ?, ?, ?, 1, ?)')
@@ -174,12 +174,10 @@ function seedHistoricalWeek(devices) {
       const device   = devices[Math.floor(Math.random() * devices.length)]
 
       // Spread signals across random hours of the day
-      const hour   = 8 + Math.floor(Math.random() * 14) // 8am–10pm
-      const minute = Math.floor(Math.random() * 60)
       const d      = new Date()
       d.setDate(d.getDate() - daysAgo)
       d.setHours(hour, minute, 0, 0)
-      const ts = d.toISOString().replace('T', ' ').slice(0, 19)
+      const ts = d.toISOString()
 
       fireSignal(device, scenario, ts)
       total++

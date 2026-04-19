@@ -112,6 +112,47 @@ export async function sendAlertEmail({ parentName, parentEmail, childName, alert
   }
 }
 
+export async function sendConsentEmail({ name, email, consentToken }) {
+  const appUrl  = process.env.APP_URL || 'http://localhost:3001'
+  const verifyUrl = `${appUrl}/api/auth/verify-consent?token=${consentToken}`
+  try {
+    await getTransporter().sendMail({
+      from: FROM, to: email,
+      subject: 'Sentra — confirm your parental consent',
+      html: `
+<!DOCTYPE html><html>
+<body style="margin:0;padding:0;background:#F3EDDD;font-family:Inter,-apple-system,sans-serif">
+  <div style="max-width:520px;margin:40px auto;padding:0 20px">
+    <div style="margin-bottom:32px;font-family:Georgia,serif;font-size:22px;color:#1A2A22;font-weight:500">◆ Sentra</div>
+    <div style="background:#FBF7EB;border-radius:20px;padding:36px;border:0.5px solid rgba(26,42,34,0.14)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#C85A2E;font-weight:600;margin-bottom:12px">Action required</div>
+      <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;color:#1A2A22;margin:0 0 12px;letter-spacing:-0.5px">
+        Confirm your parental consent.
+      </h1>
+      <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 8px">
+        Hi ${name}, you've created a Sentra account to monitor your child's AI chatbot activity.
+      </p>
+      <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 24px">
+        To comply with COPPA and activate monitoring, please confirm you are the parent or legal guardian of the children you will monitor.
+      </p>
+      <a href="${verifyUrl}"
+         style="display:inline-block;background:#2C5A3F;color:#F8F4E8;padding:16px 32px;border-radius:100px;text-decoration:none;font-size:15px;font-weight:600">
+        Confirm parental consent →
+      </a>
+      <p style="font-size:12px;color:#3C4A42;margin-top:20px;line-height:1.6">
+        This link expires in 48 hours. If you did not create this account, you can safely ignore this email.<br><br>
+        Sentra monitors behavioral metadata only — we never read message content.<br>
+        <a href="${appUrl}/privacy" style="color:#2C5A3F">Privacy policy</a>
+      </p>
+    </div>
+  </div>
+</body></html>`,
+    })
+  } catch (err) {
+    console.error('[email] consent send failed:', err.message)
+  }
+}
+
 export async function sendWelcomeEmail({ name, email }) {
   try {
     await getTransporter().sendMail(welcomeEmail({ name, email }))

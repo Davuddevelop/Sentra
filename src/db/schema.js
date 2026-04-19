@@ -19,13 +19,22 @@ db.exec(`
 
   /* ── Users (parents) ──────────────────────────────────── */
   CREATE TABLE IF NOT EXISTS users (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    email         TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    name          TEXT NOT NULL,
-    plan          TEXT NOT NULL DEFAULT 'starter',
-    plan_status   TEXT NOT NULL DEFAULT 'active',
-    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    email               TEXT UNIQUE NOT NULL,
+    password_hash       TEXT NOT NULL,
+    name                TEXT NOT NULL,
+    plan                TEXT NOT NULL DEFAULT 'starter',
+    plan_status         TEXT NOT NULL DEFAULT 'active',
+    -- Verifiable COPPA consent
+    consent_verified    INTEGER NOT NULL DEFAULT 0,
+    consent_token       TEXT,
+    consent_sent_at     DATETIME,
+    -- Stripe
+    stripe_customer_id  TEXT,
+    stripe_sub_id       TEXT,
+    -- Push notifications (parent's device)
+    push_token          TEXT,
+    created_at          DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   /* ── Families ─────────────────────────────────────────── */
@@ -83,10 +92,29 @@ db.exec(`
   );
 
   /* ── Indexes ──────────────────────────────────────────── */
-  CREATE INDEX IF NOT EXISTS idx_alerts_family   ON alerts(family_id, read, created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_signals_device  ON signals(device_id, processed, created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_devices_child   ON devices(child_id);
-  CREATE INDEX IF NOT EXISTS idx_children_family ON children(family_id);
+  CREATE INDEX IF NOT EXISTS idx_alerts_family    ON alerts(family_id, read, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_alerts_child     ON alerts(child_id, level, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_signals_device   ON signals(device_id, processed, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_signals_type     ON signals(type, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_devices_child    ON devices(child_id);
+  CREATE INDEX IF NOT EXISTS idx_devices_token    ON devices(device_token);
+  CREATE INDEX IF NOT EXISTS idx_children_family  ON children(family_id);
 `)
+
+// ── Column migrations (safe: skipped if column already exists) ──
+const userCols = db.pragma('table_info(users)').map(r => r.name)
+const addIfMissing = (col, def) => {
+  if (!userCols.includes(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${def}`)
+}
+addIfMissing('plan_status',        "TEXT NOT NULL DEFAULT 'active'")
+addIfMissing('consent_verified',   'INTEGER NOT NULL DEFAULT 0')
+addIfMissing('consent_token',      'TEXT')
+addIfMissing('consent_sent_at',    'DATETIME')
+addIfMissing('stripe_customer_id', 'TEXT')
+addIfMissing('stripe_sub_id',      'TEXT')
+addIfMissing('push_token',         'TEXT')
+
+// This partial index needs consent_token to exist first
+db.exec(`CREATE INDEX IF NOT EXISTS idx_users_consent ON users(consent_token) WHERE consent_token IS NOT NULL`)
 
 export default db

@@ -10,6 +10,7 @@ import db from './src/db/schema.js'
 import authRoutes from './src/routes/auth.js'
 import dashboardRoutes from './src/routes/dashboard.js'
 import signalRoutes from './src/routes/signals.js'
+import billingRoutes from './src/routes/billing.js'
 import { startSimulator } from './src/simulator.js'
 import { sendWeeklyDigest } from './src/services/email.js'
 
@@ -65,6 +66,10 @@ app.use('/api', dashboardRoutes)
 
 // ─── Signal ingestion (/api/signal) ──────────────────────
 app.use('/api', signalRoutes)
+
+// ─── Billing (/api/billing/*) ────────────────────────────
+// Webhook must use raw body — mount before express.json() would reparse
+app.use('/api/billing', billingRoutes)
 
 // ─── 90-day data purge (runs at midnight daily) ───────────────
 function runPurge() {

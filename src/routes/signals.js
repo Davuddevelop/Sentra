@@ -2,23 +2,39 @@ import { Router } from 'express'
 import db from '../db/schema.js'
 import { analyzeSignal } from '../ai/analyzer.js'
 import { sendAlertEmail } from '../services/email.js'
+import { sendAlertPush } from '../services/push.js'
 
 const router = Router()
 
 const RULE_SCORES = {
+  // AI chatbot signals (browser extension + Android accessibility)
   'ai.romantic_roleplay':    85,
   'ai.jailbreak_attempt':    80,
   'ai.harmful_advice':       90,
   'ai.emotional_dependency': 60,
+
+  // Contact signals
   'contact.unknown_dm':      70,
   'contact.off_platform':    75,
+
+  // Content signals
   'content.graphic':         88,
   'content.deepfake':        92,
+
+  // Screen time signals (mobile + browser)
   'screen.late_night':       40,
   'screen.excessive':        35,
+
+  // Privacy signals
   'privacy.data_shared':     65,
+
+  // App lifecycle signals
   'app.new_install':         20,
   'app.scan_clean':          0,
+  'app.foreground':          5,   // mobile: AI app opened
+
+  // Mobile tamper signals
+  'app.tamper_detected':     95,  // device admin removed — critical
 }
 
 const ALERT_LEVEL = s => s >= 80 ? 'critical' : s >= 60 ? 'warn' : s >= 20 ? 'info' : 'ok'
@@ -29,7 +45,7 @@ const CATEGORY = {
   content: 'Content',
   screen:  'Screen Time',
   privacy: 'Privacy',
-  app:     'App Scan',
+  app:     'App Activity',
 }
 
 /* ── POST /api/signal ─────────────────────────────────────────
@@ -48,11 +64,15 @@ router.post('/signal', async (req, res) => {
 
   // Zero-Knowledge: strip any text fields before storing — metadata only
   const ALLOWED_KEYS = new Set([
+    // Common
     'app','platform','session_minutes','sessions_today','duration_minutes',
     'start_time','total_hours','day','apps_scanned','threats_found',
     'attempts','contact_type','contact_age_unknown','data_type',
     'topic_category','flagged','prompt_pattern','session_frequency',
     'persona_type','message','risk_score','level',
+    // Mobile-specific
+    'event','package_name','app_label','foreground_minutes',
+    'late_night_hour','os_version','device_model',
   ])
   const payload = Object.fromEntries(
     Object.entries(rawPayload).filter(([k]) => ALLOWED_KEYS.has(k))
@@ -90,16 +110,19 @@ router.post('/signal', async (req, res) => {
     `).run(child.family_id, child.id, signalId, level, category, title, body)
     alertId = lastInsertRowid
 
-    // ── 5. Email parent on warn/critical ──────────────────
+    // ── 5. Email + push parent on warn/critical ───────────
     if (level === 'warn' || level === 'critical') {
-      setImmediate(() =>
+      setImmediate(() => {
         sendAlertEmail({
           parentName:  parent.name,
           parentEmail: parent.email,
           childName:   child.name,
           alert:       { level, title, body },
         })
-      )
+        if (parent.push_token) {
+          sendAlertPush({ pushToken: parent.push_token, childName: child.name, level, title })
+        }
+      })
     }
   }
 

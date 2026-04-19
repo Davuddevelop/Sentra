@@ -32,7 +32,8 @@ function toast(msg, type = 'success') {
 }
 
 function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr + 'Z').getTime()
+  const date = dateStr.includes('Z') || dateStr.includes('+') ? new Date(dateStr) : new Date(dateStr + 'Z')
+  const diff = Date.now() - date.getTime()
   const m = Math.floor(diff / 60000)
   if (m < 1)  return 'just now'
   if (m < 60) return `${m}m ago`
@@ -44,6 +45,9 @@ function timeAgo(dateStr) {
 function initials(name = '') {
   return name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
+
+const LEVEL_COLOR = { critical: '#C85A2E', warn: '#D97706', info: '#2C5A3F' }
+const CAT_COLORS  = ['#2C5A3F', '#D97706', '#C85A2E', '#1B3A27', '#5A8C6F', '#9CA3AF']
 
 // ─── Chart defaults ──────────────────────────────────────────
 Chart.defaults.font.family   = 'Inter, -apple-system, sans-serif'
@@ -110,6 +114,11 @@ function setView(name, data = null) {
   const titles = { overview: 'Family overview', activity: 'Activity log', weekly: 'Weekly report', child: '' }
   $('#topbar-greeting').textContent = titles[name] ?? 'Family overview'
 
+  // Sync mobile nav active state
+  document.querySelectorAll('#mobile-nav .mobile-nav-btn[data-view]').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === name)
+  })
+
   if (name === 'activity') initActivityView()
   if (name === 'weekly')   initWeeklyView()
   if (name === 'child' && data) initChildView(data)
@@ -131,9 +140,50 @@ function showAuth(view = 'login') {
 function showApp() {
   hide($('#auth-screen'))
   $('#app').style.display = 'grid'
+  $('#mobile-nav').style.display = window.innerWidth <= 900 ? 'flex' : 'none'
+
+  // Show consent banner if parent hasn't verified their email yet
+  if (currentUser && !currentUser.consent_verified) {
+    $('#consent-banner').style.display = 'flex'
+  }
+
+  // Check URL for consent=verified redirect from email link
+  const params = new URLSearchParams(location.search)
+  if (params.get('consent') === 'verified') {
+    $('#consent-banner').style.display = 'none'
+    toast('Parental consent confirmed — monitoring is fully active.')
+    history.replaceState({}, '', location.pathname)
+  }
+
   setView('overview')
   loadDashboard()
 }
+
+$('#resend-consent-btn')?.addEventListener('click', async () => {
+  try {
+    await api('/auth/resend-consent', { method: 'POST' })
+    toast('Confirmation email resent — check your inbox.')
+  } catch {
+    toast('Could not resend email. Try again shortly.', 'error')
+  }
+})
+
+// Mobile nav click handlers
+document.querySelectorAll('#mobile-nav .mobile-nav-btn[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setView(btn.dataset.view)
+    document.querySelectorAll('#mobile-nav .mobile-nav-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+  })
+})
+$('#mobile-settings-btn')?.addEventListener('click', () => {
+  toast('Settings — manage your account from the sidebar on desktop.')
+})
+
+window.addEventListener('resize', () => {
+  const nav = $('#mobile-nav')
+  if (nav) nav.style.display = window.innerWidth <= 900 ? 'flex' : 'none'
+})
 
 function showError(msg) {
   const el = $('#auth-error')
@@ -207,7 +257,7 @@ async function loadDashboard() {
   $('#topbar-greeting').textContent = `Good ${greeting()}, ${currentUser.name.split(' ')[0]}`
   $('#topbar-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
-  await Promise.all([loadStats(), loadAlerts(), loadChildren(), loadOverviewCharts()])
+  await Promise.all([loadStats(), loadAlerts(), loadChildren(), loadOverviewCharts(), loadPlanCard()])
 }
 
 function greeting() {
@@ -217,16 +267,29 @@ function greeting() {
   return 'evening'
 }
 
+const DEMO_STATS = { children: 2, devices: 3, signalsThisWeek: 65, unreadAlerts: 4 }
+const DEMO_ALERTS = [
+  { id: 'demo-1', level: 'critical', title: 'Possible jailbreak prompt detected', category: 'AI Safety',   child_name: 'Emma', created_at: new Date(Date.now() - 18 * 60000).toISOString().replace('Z',''), read: false },
+  { id: 'demo-2', level: 'warn',     title: 'Extended late-night AI session',      category: 'Screen time', child_name: 'Emma', created_at: new Date(Date.now() - 3 * 3600000).toISOString().replace('Z',''), read: false },
+  { id: 'demo-3', level: 'warn',     title: 'Romantic language pattern flagged',   category: 'Contact',     child_name: 'Liam', created_at: new Date(Date.now() - 5 * 3600000).toISOString().replace('Z',''), read: true },
+  { id: 'demo-4', level: 'info',     title: 'New AI app installed: Character.AI',  category: 'App scan',    child_name: 'Liam', created_at: new Date(Date.now() - 86400000).toISOString().replace('Z',''), read: true },
+]
+let isDemoMode = false
+
 async function loadStats() {
   try {
     const s = await api('/stats')
-    $('#stat-children').textContent = s.children
-    $('#stat-devices').textContent  = s.devices
-    $('#stat-signals').textContent  = s.signalsThisWeek
-    $('#stat-alerts').textContent   = s.unreadAlerts
+    isDemoMode = s.children === 0
+
+    const display = isDemoMode ? DEMO_STATS : s
+    $('#stat-children').textContent = display.children
+    $('#stat-devices').textContent  = display.devices
+    $('#stat-signals').textContent  = display.signalsThisWeek
+    $('#stat-alerts').textContent   = display.unreadAlerts
+
     const badge = $('#alert-badge')
-    if (s.unreadAlerts > 0) {
-      badge.textContent = s.unreadAlerts
+    if (display.unreadAlerts > 0) {
+      badge.textContent = display.unreadAlerts
       badge.style.display = 'inline-block'
     } else {
       badge.style.display = 'none'
@@ -234,15 +297,9 @@ async function loadStats() {
   } catch { /* silent */ }
 }
 
-async function loadAlerts() {
-  const feed = $('#alert-feed')
-  try {
-    const { alerts } = await api('/alerts?limit=8')
-    if (!alerts.length) {
-      feed.innerHTML = '<div class="empty-state">No alerts yet — your family is protected.</div>'
-      return
-    }
-    feed.innerHTML = alerts.map(a => `
+function renderAlertRows(alerts, feed, isDemo = false) {
+  feed.innerHTML = (isDemo ? '<div class="demo-banner">Sample data — add a child to see real monitoring</div>' : '')
+    + alerts.map(a => `
       <div class="alert-row ${a.read ? 'read' : ''}" data-id="${a.id}">
         <span class="alert-pill pill-${a.level}">${a.level}</span>
         <div class="alert-body">
@@ -251,6 +308,21 @@ async function loadAlerts() {
         </div>
       </div>
     `).join('')
+}
+
+async function loadAlerts() {
+  const feed = $('#alert-feed')
+  try {
+    const { alerts } = await api('/alerts?limit=8')
+    if (!alerts.length && isDemoMode) {
+      renderAlertRows(DEMO_ALERTS, feed, true)
+      return
+    }
+    if (!alerts.length) {
+      feed.innerHTML = '<div class="empty-state">No alerts yet — your family is protected.</div>'
+      return
+    }
+    renderAlertRows(alerts, feed)
 
     feed.querySelectorAll('.alert-row:not(.read)').forEach(row => {
       row.addEventListener('click', async () => {
@@ -270,6 +342,11 @@ function deviceStatus(lastSeen) {
   if (mins < 5)  return { cls: 'online',  label: 'Active now' }
   if (mins < 60) return { cls: 'recent',  label: `${Math.round(mins)}m ago` }
   return { cls: 'offline', label: timeAgo(lastSeen) }
+}
+
+function platformLabel(platform) {
+  const labels = { browser: 'Browser', ios: 'iPhone', android: 'Android', windows: 'Windows', mac: 'Mac' }
+  return labels[platform] || platform
 }
 
 function platformIcon(platform) {
@@ -313,6 +390,7 @@ async function loadChildren() {
                 <div class="device-item">
                   <span class="device-item-icon">${platformIcon(d.platform)}</span>
                   <span class="device-item-name">${d.name}</span>
+                  <span class="platform-badge platform-${d.platform}">${platformLabel(d.platform)}</span>
                   <span class="device-status">
                     <span class="status-dot-sm ${s.cls}"></span>${s.label}
                   </span>
@@ -429,17 +507,10 @@ async function loadOverviewCharts() {
 
 function renderDailyChart(byDay, canvasId = 'chart-daily') {
   // Merge real data on top of fake baseline so chart is never sparse
-  const labels   = FAKE.days
-  const critical = [...FAKE.critical]
-  const warn     = [...FAKE.warn]
-  const info     = [...FAKE.info]
-  byDay.forEach((d, i) => {
-    if (i < 7) {
-      critical[i] = Math.max(critical[i], d.critical)
-      warn[i]     = Math.max(warn[i], d.warn)
-      info[i]     = Math.max(info[i], d.info)
-    }
-  })
+  const labels   = byDay.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }))
+  const critical = byDay.map(d => d.critical)
+  const warn     = byDay.map(d => d.warn)
+  const info     = byDay.map(d => d.info)
 
   mkChart(canvasId, {
     type: 'bar',
@@ -462,14 +533,18 @@ function renderDailyChart(byDay, canvasId = 'chart-daily') {
   })
 }
 
-function renderCategoryChart(_byCategory, canvasId = 'chart-category') {
+function renderCategoryChart(byCategory, canvasId = 'chart-category') {
+  const labels = byCategory.map(c => c.category)
+  const data   = byCategory.map(c => c.count)
+  const colors = CAT_COLORS.slice(0, labels.length)
+
   mkChart(canvasId, {
     type: 'doughnut',
     data: {
-      labels: FAKE.categories.labels,
+      labels,
       datasets: [{
-        data: FAKE.categories.data,
-        backgroundColor: FAKE.categories.colors,
+        data,
+        backgroundColor: colors,
         borderWidth: 3,
         borderColor: '#FBF7EB',
         hoverOffset: 8,
@@ -551,10 +626,13 @@ async function initWeeklyView() {
   $('#weekly-date-range').textContent = `${fmt(start)} – ${fmt(now)}, ${now.getFullYear()}`
 
   try {
-    const total    = FAKE.levels.data.reduce((a, b) => a + b, 0)
-    const critical = FAKE.levels.data[0]
-    const warn     = FAKE.levels.data[1]
-    const info     = FAKE.levels.data[2]
+    const data = await api('/activity?days=7')
+
+    // Stat cards
+    const total    = data.byLevel.reduce((s, d) => s + d.count, 0)
+    const critical = data.byLevel.find(d => d.level === 'critical')?.count || 0
+    const warn     = data.byLevel.find(d => d.level === 'warn')?.count || 0
+    const info     = data.byLevel.find(d => d.level === 'info')?.count || 0
 
     $('#weekly-stats').innerHTML = `
       <div class="stat-card"><div class="stat-label">Total signals</div><div class="stat-num">${total}</div><div class="stat-sub">this week</div></div>
@@ -564,47 +642,33 @@ async function initWeeklyView() {
     `
 
     // Risk line chart — shows per-child risk score trend across 7 days
+    const datasets = data.byChild.map((c, i) => ({
+      label: c.name,
+      data: data.byDay.map(d => {
+        // Simple risk heuristic: critical=20, warn=10, info=3
+        return d.critical * 20 + d.warn * 10 + d.info * 3
+      }),
+      borderColor: CAT_COLORS[i % CAT_COLORS.length],
+      backgroundColor: `rgba(44,90,63,0.06)`,
+      borderWidth: 2.5,
+      pointBackgroundColor: CAT_COLORS[i % CAT_COLORS.length],
+      pointRadius: 4,
+      tension: 0.4,
+      fill: true,
+    }))
+
     mkChart('chart-weekly-trend', {
       type: 'line',
       data: {
-        labels: FAKE.days,
-        datasets: [
-          {
-            label: 'Emma',
-            data: FAKE.emma.map((v, i) => FAKE.critical[i] * 20 + FAKE.warn[i] * 10 + v * 3),
-            borderColor: '#C85A2E',
-            backgroundColor: 'rgba(200,90,46,0.08)',
-            borderWidth: 2.5,
-            pointBackgroundColor: '#C85A2E',
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            tension: 0.4,
-            fill: true,
-          },
-          {
-            label: 'Liam',
-            data: FAKE.liam.map((v, i) => FAKE.warn[i] * 8 + v * 4),
-            borderColor: '#2C5A3F',
-            backgroundColor: 'rgba(44,90,63,0.06)',
-            borderWidth: 2.5,
-            pointBackgroundColor: '#2C5A3F',
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            tension: 0.4,
-            fill: true,
-          },
-        ]
+        labels: data.byDay.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })),
+        datasets
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 14, font: { size: 11 } } } },
         scales: {
           x: { grid: { display: false }, border: { display: false } },
-          y: {
-            grid: { color: 'rgba(26,42,34,0.06)' }, border: { display: false },
-            min: 0, max: 100,
-            ticks: { callback: v => v + '%' }
-          }
+          y: { grid: { color: 'rgba(26,42,34,0.06)' }, border: { display: false }, min: 0, max: 100, ticks: { callback: v => v + '%' } }
         }
       }
     })
@@ -613,10 +677,10 @@ async function initWeeklyView() {
     mkChart('chart-weekly-dist', {
       type: 'doughnut',
       data: {
-        labels: FAKE.levels.labels,
+        labels: data.byLevel.map(l => l.level.toUpperCase()),
         datasets: [{
-          data: FAKE.levels.data,
-          backgroundColor: FAKE.levels.colors,
+          data: data.byLevel.map(l => l.count),
+          backgroundColor: data.byLevel.map(l => LEVEL_COLOR[l.level] || '#9CA3AF'),
           borderWidth: 3,
           borderColor: '#FBF7EB',
           hoverOffset: 8,
@@ -628,26 +692,31 @@ async function initWeeklyView() {
       }
     })
 
-    // Per-child breakdown — always uses fake data so bars look full
-    const fakeChildren = [
-      { name: 'Emma', count: 37, critical: 7, warn: 14, color: '#C85A2E', pct: 100 },
-      { name: 'Liam', count: 28, critical: 3,  warn: 11, color: '#D97706', pct: 76  },
-    ]
+    // Per-child breakdown
     const childEl = $('#weekly-children')
-    childEl.innerHTML = fakeChildren.map(c => `
-      <div class="child-breakdown-row">
-        <div class="child-avatar" style="width:40px;height:40px;font-size:14px;flex-shrink:0">${c.name[0]}</div>
-        <div class="risk-bar-wrap">
-          <div class="risk-bar-label">
-            <span style="font-weight:500;font-size:14px;color:var(--ink)">${c.name}</span>
-            <span>${c.count} signals &nbsp;·&nbsp; <span style="color:#C85A2E">${c.critical} critical</span> &nbsp;·&nbsp; <span style="color:#D97706">${c.warn} warnings</span></span>
+    if (!data.byChild.length) {
+      childEl.innerHTML = '<div class="empty-state">No activity this week.</div>'
+    } else {
+      const maxCount = Math.max(...data.byChild.map(c => c.count), 1)
+      childEl.innerHTML = data.byChild.map(c => {
+        const pct = Math.round((c.count / maxCount) * 100)
+        const color = c.critical > 0 ? '#C85A2E' : c.warn > 0 ? '#D97706' : '#2C5A3F'
+        return `
+          <div class="child-breakdown-row">
+            <div class="child-avatar" style="width:40px;height:40px;font-size:14px;flex-shrink:0">${initials(c.name)}</div>
+            <div class="risk-bar-wrap">
+              <div class="risk-bar-label">
+                <span style="font-weight:500;font-size:14px;color:var(--ink)">${c.name}</span>
+                <span>${c.count} signals &nbsp;·&nbsp; <span style="color:#C85A2E">${c.critical} critical</span> &nbsp;·&nbsp; <span style="color:#D97706">${c.warn} warnings</span></span>
+              </div>
+              <div class="risk-bar-track">
+                <div class="risk-bar-fill" style="width:${pct}%;background:${color}"></div>
+              </div>
+            </div>
           </div>
-          <div class="risk-bar-track">
-            <div class="risk-bar-fill" style="width:${c.pct}%;background:${c.color}"></div>
-          </div>
-        </div>
-      </div>
-    `).join('')
+        `
+      }).join('')
+    }
   } catch (err) { console.error(err) }
 }
 
@@ -669,20 +738,12 @@ async function initChildView(childId) {
         </div>
       </div>
 
-      ${(() => {
-          const isEmma   = child.name.toLowerCase().includes('emma')
-          const signals  = isEmma ? 37 : 28
-          const unread   = isEmma ? stats.unread || 4 : stats.unread || 2
-          const peakRisk = isEmma ? 85 : 60
-          const riskCol  = isEmma ? '#C85A2E' : '#D97706'
-          return `
-          <div class="stats-row" style="margin-bottom:24px;flex-shrink:0">
-            <div class="stat-card"><div class="stat-label">Devices</div><div class="stat-num">${devices.length}</div><div class="stat-sub">connected</div></div>
-            <div class="stat-card"><div class="stat-label">Signals</div><div class="stat-num">${signals}</div><div class="stat-sub">this week</div></div>
-            <div class="stat-card"><div class="stat-label">Unread alerts</div><div class="stat-num" style="color:#C85A2E">${unread}</div><div class="stat-sub">need review</div></div>
-            <div class="stat-card"><div class="stat-label">Peak risk</div><div class="stat-num" style="color:${riskCol}">${peakRisk}</div><div class="stat-sub">max score</div></div>
-          </div>`
-        })()}
+      <div class="stats-row" style="margin-bottom:24px;flex-shrink:0">
+        <div class="stat-card"><div class="stat-label">Devices</div><div class="stat-num">${devices.length}</div><div class="stat-sub">connected</div></div>
+        <div class="stat-card"><div class="stat-label">Signals</div><div class="stat-num">${stats.signals}</div><div class="stat-sub">this week</div></div>
+        <div class="stat-card"><div class="stat-label">Unread alerts</div><div class="stat-num" style="color:#C85A2E">${stats.unread}</div><div class="stat-sub">need review</div></div>
+        <div class="stat-card"><div class="stat-label">Peak risk</div><div class="stat-num" style="color:${stats.maxRisk >= 80 ? '#C85A2E' : stats.maxRisk >= 60 ? '#D97706' : '#2C5A3F'}">${stats.maxRisk}</div><div class="stat-sub">max score</div></div>
+      </div>
 
       <div class="two-col" style="margin-bottom:24px;flex:0 0 auto">
         <div class="card">
@@ -697,6 +758,7 @@ async function initChildView(childId) {
                   return `<div class="device-item" style="margin-bottom:8px">
                     <span class="device-item-icon">${platformIcon(d.platform)}</span>
                     <span class="device-item-name">${d.name}</span>
+                    <span class="platform-badge platform-${d.platform}">${platformLabel(d.platform)}</span>
                     <span class="device-status"><span class="status-dot-sm ${s.cls}"></span>${s.label}</span>
                     <button class="device-token-btn" data-token="${d.device_token}">Copy token</button>
                   </div>`
@@ -730,20 +792,16 @@ async function initChildView(childId) {
       </div>
     `
 
-    // Child-specific chart — unique data per child
-    const isEmma    = child.name.toLowerCase().includes('emma')
-    const cCritical = isEmma ? [1,2,0,3,1,2,1] : [0,1,0,1,0,1,0]
-    const cWarn     = isEmma ? [2,3,4,1,3,5,2] : [2,2,3,1,3,2,1]
-    const cInfo     = isEmma ? [4,2,5,3,4,3,4] : [3,2,4,2,3,2,3]
+    const actData = await api(`/activity?days=7&child_id=${childId}`)
 
     mkChart('chart-child-activity', {
       type: 'bar',
       data: {
-        labels: FAKE.days,
+        labels: actData.byDay.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })),
         datasets: [
-          { label: 'Critical', data: cCritical, backgroundColor: '#C85A2E', borderRadius: 6, stack: 's' },
-          { label: 'Warning',  data: cWarn,     backgroundColor: '#D97706', borderRadius: 6, stack: 's' },
-          { label: 'Info',     data: cInfo,     backgroundColor: '#2C5A3F', borderRadius: 6, stack: 's' },
+          { label: 'Critical', data: actData.byDay.map(d => d.critical), backgroundColor: '#C85A2E', borderRadius: 4, stack: 's' },
+          { label: 'Warning',  data: actData.byDay.map(d => d.warn),     backgroundColor: '#D97706', borderRadius: 4, stack: 's' },
+          { label: 'Info',     data: actData.byDay.map(d => d.info),     backgroundColor: '#2C5A3F', borderRadius: 4, stack: 's' },
         ]
       },
       options: {
@@ -802,13 +860,14 @@ $('#add-device-form').addEventListener('submit', async (e) => {
   btn.disabled = true; btn.textContent = 'Generating…'
   try {
     const fd = new FormData(e.target)
+    const platform = fd.get('platform') || 'browser'
     const { device } = await api('/family/device', {
       method: 'POST',
-      body: { child_id: parseInt(fd.get('child_id')), name: fd.get('name'), platform: fd.get('platform') }
+      body: { child_id: parseInt(fd.get('child_id')), name: fd.get('name'), platform }
     })
     $('#add-device-modal').style.display = 'none'
     e.target.reset()
-    showTokenModal(device.device_token, device.name)
+    showTokenModal(device.device_token, device.name, platform)
     loadChildren()
     loadStats()
   } catch (err) {
@@ -819,12 +878,50 @@ $('#add-device-form').addEventListener('submit', async (e) => {
 })
 
 // ─── Token reveal modal ───────────────────────────────────────
-function showTokenModal(token, deviceName) {
+const PLATFORM_STEPS = {
+  ios: [
+    'Install the Sentra app on your child\'s iPhone or iPad (App Store)',
+    'Open the app → tap <strong>Connect device</strong>',
+    'Scan the QR code above — or paste the token manually',
+    'Grant <strong>Family Controls</strong> permission when prompted',
+  ],
+  android: [
+    'Install the Sentra app on your child\'s Android device (Play Store)',
+    'Open the app → tap <strong>Connect device</strong>',
+    'Scan the QR code above — or paste the token manually',
+    'Grant <strong>Accessibility Service</strong> and <strong>Device Admin</strong> permissions',
+  ],
+  browser: [
+    'Install the Sentra extension on the child\'s Chromebook or desktop Chrome',
+    'Click the extension icon → Scan QR code — or paste the token manually',
+    'Set a PIN in extension settings so the child cannot remove it',
+  ],
+  windows: [
+    'Install the Sentra extension in Chrome on the child\'s Windows PC',
+    'Click the extension icon → Scan QR code — or paste the token manually',
+    'Set a PIN in extension settings so the child cannot remove it',
+  ],
+  mac: [
+    'Install the Sentra extension in Chrome on the child\'s Mac',
+    'Click the extension icon → Scan QR code — or paste the token manually',
+    'Set a PIN in extension settings so the child cannot remove it',
+  ],
+}
+
+function showTokenModal(token, deviceName, platform = 'browser') {
   $('#token-display').textContent = token
   $('#token-modal').querySelector('.modal-title').textContent = `${deviceName} connected`
+
+  const isMobile = platform === 'ios' || platform === 'android'
+  $('#token-modal-subtitle').textContent = isMobile
+    ? 'Open the Sentra app on the child\'s device and paste or scan this token. It won\'t be shown again.'
+    : 'Paste this token into the Sentra Chrome extension settings. It won\'t be shown again.'
+
+  const steps = PLATFORM_STEPS[platform] || PLATFORM_STEPS.browser
+  $('#token-steps').innerHTML = steps.map(s => `<li>${s}</li>`).join('')
+
   $('#token-modal').style.display = 'flex'
 
-  // Render QR code — encodes the token so the child's device can scan to auto-fill
   const canvas = document.getElementById('token-qr')
   if (canvas && window.QRCode) {
     QRCode.toCanvas(canvas, `sentra-token:${token}`, {
@@ -943,6 +1040,60 @@ function renderGettingStarted(container) {
     $('#add-child-modal').style.display = 'flex'
   })
 }
+
+// ─── Billing / plan card ─────────────────────────────────────
+const PLAN_META = {
+  starter:      { label: 'Starter',   desc: '1 device included. Upgrade to monitor more children.', showUpgrade: true },
+  family:       { label: 'Family',    desc: 'Up to 5 devices. Manage your subscription anytime.',   showUpgrade: false },
+  'family-plus':{ label: 'Family+',   desc: 'Unlimited devices. You\'re on the top plan.',          showUpgrade: false },
+}
+
+async function loadPlanCard() {
+  try {
+    const { plan, plan_status, has_stripe } = await api('/billing/status')
+    const meta = PLAN_META[plan] || PLAN_META.starter
+    const card = $('#plan-card')
+    card.style.display = 'flex'
+    card.className = `plan-card ${plan === 'starter' ? 'starter' : ''}`
+    $('#plan-card-title').textContent = meta.label + (plan_status && plan_status !== 'active' ? ` (${plan_status})` : '')
+    $('#plan-card-desc').textContent  = meta.desc
+
+    const upgradeBtn = $('#plan-upgrade-btn')
+    const manageBtn  = $('#plan-manage-btn')
+    upgradeBtn.style.display = meta.showUpgrade ? 'block' : 'none'
+    manageBtn.style.display  = has_stripe && !meta.showUpgrade ? 'block' : 'none'
+  } catch { /* billing route may not be available — silently skip */ }
+}
+
+$('#plan-upgrade-btn')?.addEventListener('click', async () => {
+  const btn = $('#plan-upgrade-btn')
+  btn.textContent = 'Opening…'; btn.disabled = true
+  try {
+    const { url } = await api('/billing/checkout', { method: 'POST', body: { plan: 'family' } })
+    window.location.href = url
+  } catch (err) {
+    toast('Could not open checkout. Try again.', 'error')
+    btn.textContent = 'Upgrade plan →'; btn.disabled = false
+  }
+})
+
+$('#plan-manage-btn')?.addEventListener('click', async () => {
+  try {
+    const { url } = await api('/billing/portal', { method: 'POST' })
+    window.open(url, '_blank')
+  } catch {
+    toast('Could not open billing portal.', 'error')
+  }
+})
+
+// Handle Stripe redirect back with ?upgraded=1
+;(() => {
+  const params = new URLSearchParams(location.search)
+  if (params.get('upgraded') === '1') {
+    toast('Plan upgraded — thank you!')
+    history.replaceState({}, '', location.pathname)
+  }
+})()
 
 // ─── Boot: check session ──────────────────────────────────────
 ;(async () => {

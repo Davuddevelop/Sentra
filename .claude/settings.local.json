@@ -17,7 +17,20 @@
       "Bash(del /F \"c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db\" \"c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db-shm\" \"c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db-wal\")",
       "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Start-Sleep 2; Remove-Item 'c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db*' -Force; Write-Host 'done'\")",
       "Bash(node -e ' *)",
-      "Bash(kill %1)"
+      "Bash(kill %1)",
+      "Bash(npm --version)",
+      "Bash(npx expo *)",
+      "Bash(node -e \"import\\('./server.js'\\)\")",
+      "Bash(node --input-type=module)",
+      "WebSearch",
+      "WebFetch(domain:www.ycombinator.com)",
+      "WebFetch(domain:www.slidebean.com)",
+      "WebFetch(domain:www.focusedchaos.co)",
+      "WebFetch(domain:www.storydoc.com)",
+      "WebFetch(domain:qubit.capital)",
+      "WebFetch(domain:www.openvc.app)",
+      "WebFetch(domain:www.basetemplates.com)",
+      "WebFetch(domain:visible.vc)"
     ]
   }
 }

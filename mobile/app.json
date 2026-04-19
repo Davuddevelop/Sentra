@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Sentra",
+    "slug": "sentra-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1A2A22"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sentra.app",
+      "infoPlist": {
+        "NSFamilyControlsUsageDescription": "Sentra needs Family Controls access to monitor AI app usage on this device.",
+        "BGTaskSchedulerPermittedIdentifiers": ["com.sentra.signal-flush"]
+      }
+    },
+    "android": {
+      "package": "com.sentra.app",
+      "permissions": [
+        "BIND_ACCESSIBILITY_SERVICE",
+        "RECEIVE_BOOT_COMPLETED",
+        "FOREGROUND_SERVICE",
+        "REQUEST_INSTALL_PACKAGES"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1A2A22"
+      }
+    },
+    "plugins": [
+      ["expo-notifications", {
+        "icon": "./assets/notification-icon.png",
+        "color": "#2C5A3F"
+      }],
+      "expo-background-fetch",
+      "expo-task-manager"
+    ]
+  }
+}

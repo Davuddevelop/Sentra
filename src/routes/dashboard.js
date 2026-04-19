@@ -195,4 +195,54 @@ router.get('/stats', requireAuth, requireFamily, (req, res) => {
   res.json({ children, devices, unreadAlerts: alerts, signalsThisWeek: signals })
 })
 
+/* ── POST /api/push/register ─────────────────────────────── */
+// Called by parent's mobile device to register their Expo push token
+router.post('/push/register', requireAuth, (req, res) => {
+  const { push_token } = req.body ?? {}
+  if (!push_token) return res.status(400).json({ error: 'push_token required.' })
+  db.prepare('UPDATE users SET push_token = ? WHERE id = ?').run(push_token, req.user.id)
+  res.json({ ok: true })
+})
+
+/* ── DELETE /api/account ─────────────────────────────────── */
+router.delete('/account', requireAuth, (req, res) => {
+  // Cascade deletes via FK: family → children → devices → signals/alerts
+  db.prepare('DELETE FROM users WHERE id = ?').run(req.user.id)
+  res.clearCookie('token')
+  res.json({ ok: true, message: 'Account and all associated data permanently deleted.' })
+})
+
+/* ── GET /api/export ─────────────────────────────────────── */
+// GDPR right-to-access: returns all data for this family as JSON
+router.get('/export', requireAuth, requireFamily, (req, res) => {
+  const children = db.prepare('SELECT id, name, age, created_at FROM children WHERE family_id = ?').all(req.family.id)
+
+  const childrenWithData = children.map(child => {
+    const devices = db.prepare('SELECT id, name, platform, last_seen, created_at FROM devices WHERE child_id = ?').all(child.id)
+    const alerts  = db.prepare('SELECT level, category, title, body, read, created_at FROM alerts WHERE child_id = ? ORDER BY created_at DESC').all(child.id)
+    const signals = db.prepare(`
+      SELECT s.type, s.payload, s.risk_score, s.created_at
+      FROM signals s JOIN devices d ON d.id = s.device_id
+      WHERE d.child_id = ? ORDER BY s.created_at DESC LIMIT 500
+    `).all(child.id)
+    return { ...child, devices, alerts, signals }
+  })
+
+  const exportData = {
+    exported_at: new Date().toISOString(),
+    account: {
+      name:       req.user.name,
+      email:      req.user.email,
+      plan:       req.user.plan,
+      created_at: req.user.created_at,
+    },
+    family:   { name: req.family.name, created_at: req.family.created_at },
+    children: childrenWithData,
+  }
+
+  res.setHeader('Content-Disposition', 'attachment; filename="sentra-data-export.json"')
+  res.setHeader('Content-Type', 'application/json')
+  res.json(exportData)
+})
+
 export default router

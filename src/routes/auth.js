@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
 import db from '../db/schema.js'
-import { sendWelcomeEmail } from '../services/email.js'
+import { sendWelcomeEmail, sendConsentEmail } from '../services/email.js'
 
 const router = Router()
 const SALT_ROUNDS = 12
@@ -40,9 +41,12 @@ router.post('/register', async (req, res) => {
   try {
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS)
 
+    // Generate a consent verification token (COPPA requirement)
+    const consentToken = crypto.randomBytes(24).toString('hex')
+
     const { lastInsertRowid: userId } = db
-      .prepare('INSERT INTO users (name, email, password_hash, plan) VALUES (?, ?, ?, ?)')
-      .run(name.trim(), email.toLowerCase().trim(), password_hash, chosenPlan)
+      .prepare('INSERT INTO users (name, email, password_hash, plan, consent_token, consent_sent_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+      .run(name.trim(), email.toLowerCase().trim(), password_hash, chosenPlan, consentToken)
 
     // Auto-create a family for this parent
     const { lastInsertRowid: familyId } = db
@@ -50,12 +54,15 @@ router.post('/register', async (req, res) => {
       .run(userId, `${name.trim()}'s Family`)
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
-    const token = issueToken(user)
+    const sessionToken = issueToken(user)
 
-    setImmediate(() => sendWelcomeEmail({ name: name.trim(), email: email.toLowerCase().trim() }))
+    setImmediate(() => {
+      sendConsentEmail({ name: name.trim(), email: email.toLowerCase().trim(), consentToken })
+      sendWelcomeEmail({ name: name.trim(), email: email.toLowerCase().trim() })
+    })
 
-    res.cookie('token', token, COOKIE_OPTS)
-    res.status(201).json({ ok: true, user: safeUser(user), familyId })
+    res.cookie('token', sessionToken, COOKIE_OPTS)
+    res.status(201).json({ ok: true, user: safeUser(user), familyId, consent_required: true })
   } catch (err) {
     if (err.message?.includes('UNIQUE')) {
       return res.status(409).json({ error: 'An account with this email already exists.' })
@@ -80,6 +87,41 @@ router.post('/login', async (req, res) => {
   const token = issueToken(user)
   res.cookie('token', token, COOKIE_OPTS)
   res.json({ ok: true, user: safeUser(user) })
+})
+
+/* ── GET /api/auth/verify-consent?token=xxx ─────────────── */
+// Parent clicks the link in their email — marks consent as verified
+router.get('/verify-consent', (req, res) => {
+  const { token } = req.query
+  if (!token) return res.status(400).send('Invalid link.')
+
+  const user = db.prepare('SELECT * FROM users WHERE consent_token = ?').get(token)
+  if (!user) return res.status(404).send('Link expired or already used.')
+
+  db.prepare('UPDATE users SET consent_verified = 1, consent_token = NULL WHERE id = ?').run(user.id)
+
+  // Redirect to dashboard with a success flag
+  const appUrl = process.env.APP_URL || 'http://localhost:5173'
+  res.redirect(`${appUrl}/dashboard.html?consent=verified`)
+})
+
+/* ── POST /api/auth/resend-consent ──────────────────────── */
+router.post('/resend-consent', (req, res) => {
+  const token = req.cookies?.token
+  if (!token) return res.status(401).json({ error: 'Not authenticated.' })
+  try {
+    const payload = jwt.verify(token, JWT_SECRET)
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id)
+    if (!user || user.consent_verified) return res.json({ ok: true })
+
+    const consentToken = crypto.randomBytes(24).toString('hex')
+    db.prepare('UPDATE users SET consent_token = ?, consent_sent_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(consentToken, user.id)
+    setImmediate(() => sendConsentEmail({ name: user.name, email: user.email, consentToken }))
+    res.json({ ok: true })
+  } catch {
+    res.status(401).json({ error: 'Session expired.' })
+  }
 })
 
 /* ── POST /api/auth/logout ───────────────────────────────── */
