@@ -12,7 +12,12 @@
       "Bash(curl -s -X POST http://localhost:3001/api/waitlist -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"plan\":\"family\"}')",
       "Bash(curl -s -X POST http://localhost:3001/api/waitlist -H 'Content-Type: application/json' -d '{\"email\":\"bad-email\",\"plan\":\"family\"}')",
       "Bash(curl -s -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"Test Parent\",\"email\":\"parent@test.com\",\"password\":\"password123\",\"plan\":\"family\"}')",
-      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"parent@test.com\",\"password\":\"password123\"}' -c /tmp/sentra-cookies.txt)"
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"parent@test.com\",\"password\":\"password123\"}' -c /tmp/sentra-cookies.txt)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(del /F \"c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db\" \"c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db-shm\" \"c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db-wal\")",
+      "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Start-Sleep 2; Remove-Item 'c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db*' -Force; Write-Host 'done'\")",
+      "Bash(node -e ' *)",
+      "Bash(kill %1)"
     ]
   }
 }

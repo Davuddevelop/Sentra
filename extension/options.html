@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sentra — Extension Settings</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Inter, -apple-system, sans-serif;
+      background: #F3EDDD;
+      color: #1A2A22;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container { max-width: 520px; margin: 0 auto; }
+
+    .logo {
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1A2A22;
+      font-weight: 500;
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      font-family: Georgia, serif;
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .lead {
+      font-size: 15px;
+      color: #3C4A42;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: #FBF7EB;
+      border-radius: 20px;
+      padding: 32px;
+      border: 0.5px solid rgba(26,42,34,0.14);
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #3C4A42;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"] {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 0.5px solid rgba(26,42,34,0.3);
+      background: #F3EDDD;
+      font-size: 14px;
+      font-family: monospace;
+      color: #1A2A22;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #2C5A3F;
+      box-shadow: 0 0 0 3px rgba(44,90,63,0.12);
+    }
+
+    input[type="password"] {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 0.5px solid rgba(26,42,34,0.3);
+      background: #F3EDDD;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1A2A22;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #3C4A42;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .hint a { color: #2C5A3F; }
+
+    .btn {
+      padding: 12px 28px;
+      border-radius: 100px;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-primary { background: #1A2A22; color: #F8F4E8; }
+    .btn-primary:hover { background: #2C5A3F; }
+
+    .toast {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .toast.success { background: #D9E5D1; color: #1B3A27; }
+    .toast.error   { background: #F5D5C8; color: #7A2E0E; }
+
+    .monitored-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .monitored-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .monitored-list .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2C5A3F;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">◆ Sentra</div>
+
+    <h1>Extension Settings</h1>
+    <p class="lead">Connect this browser to your Sentra account by entering the device token from your dashboard.</p>
+
+    <!-- PIN lock screen — shown if PIN is set and not yet entered -->
+    <div id="pin-gate" style="display:none">
+      <div class="card" style="text-align:center">
+        <div style="font-size:32px;margin-bottom:12px">🔒</div>
+        <div class="card-title" style="margin-bottom:8px">Parent PIN required</div>
+        <p class="hint" style="margin-bottom:16px">Enter the parent PIN to access extension settings.</p>
+        <input type="password" id="pinInput" maxlength="6" placeholder="Enter PIN"
+          style="text-align:center;letter-spacing:8px;font-size:20px;width:160px;margin:0 auto 12px;display:block">
+        <button class="btn btn-primary" id="pinSubmitBtn" style="width:100%">Unlock</button>
+        <div class="toast" id="pin-toast"></div>
+      </div>
+    </div>
+
+    <!-- Main settings — hidden until PIN unlocked (or no PIN set) -->
+    <div id="settings-body">
+      <div class="card">
+        <div class="card-title">Device Token</div>
+        <label for="tokenInput">Token</label>
+        <input type="text" id="tokenInput" placeholder="Paste your device token here…" autocomplete="off" spellcheck="false">
+        <p class="hint">
+          Find your device token in the <a href="http://localhost:8000/dashboard.html" target="_blank">Sentra dashboard</a>
+          under your child's device settings. Scan the QR code for instant pairing.
+        </p>
+        <button class="btn btn-primary" id="saveBtn">Save Token</button>
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tamper Protection</div>
+        <p class="hint" style="margin-bottom:16px">Set a PIN so only you (the parent) can change extension settings. The child will see a lock screen if they try to open this page.</p>
+        <label for="pinSetInput">Set or change PIN <span style="color:#3C4A42;font-weight:400">(4–6 digits)</span></label>
+        <input type="password" id="pinSetInput" maxlength="6" placeholder="e.g. 1234" autocomplete="new-password">
+        <label for="pinConfirmInput" style="margin-top:8px">Confirm PIN</label>
+        <input type="password" id="pinConfirmInput" maxlength="6" placeholder="Repeat PIN" autocomplete="new-password">
+        <button class="btn btn-primary" id="savePinBtn" style="margin-top:4px">Set PIN</button>
+        <div class="toast" id="pin-set-toast"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Monitored Apps</div>
+        <ul class="monitored-list">
+          <li><span class="dot"></span> ChatGPT (chat.openai.com, chatgpt.com)</li>
+          <li><span class="dot"></span> Character.AI (character.ai)</li>
+          <li><span class="dot"></span> Replika (replika.com)</li>
+        </ul>
+        <p class="hint" style="margin-top:16px;padding-top:16px;border-top:0.5px solid rgba(26,42,34,0.1)">
+          ⓘ Sentra monitors <strong>Chromebooks and desktop browsers</strong>. For smartphone monitoring, an MDM profile is required (coming soon).
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

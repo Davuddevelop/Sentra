@@ -63,7 +63,14 @@
   observer.observe(document.body, { childList: true, subtree: true })
   attachListeners()
 
+  const retryInterval = setInterval(() => {
+    if (getInput()?.__sentraAttached) clearInterval(retryInterval)
+    else attachListeners()
+  }, 2000)
+
   window.addEventListener('beforeunload', () => {
+    clearInterval(retryInterval)
+    observer.disconnect()
     chrome.runtime.sendMessage({ type: 'SESSION_END', app: APP })
   })
 })()

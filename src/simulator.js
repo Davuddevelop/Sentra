@@ -130,30 +130,62 @@ const RISK_SCORE = {
 
 const ALERT_LEVEL = s => s >= 80 ? 'critical' : s >= 60 ? 'warn' : s >= 20 ? 'info' : 'ok'
 
-function fireSignal(device, scenario) {
-  const risk   = RISK_SCORE[scenario.type] ?? 20
-  const level  = ALERT_LEVEL(risk)
+function fireSignal(device, scenario, at = null) {
+  const risk    = RISK_SCORE[scenario.type] ?? 20
+  const level   = ALERT_LEVEL(risk)
   const payload = JSON.stringify(scenario.payload)
+  const ts      = at || new Date().toISOString().replace('T', ' ').slice(0, 19)
 
   const { lastInsertRowid: sigId } = db
-    .prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed) VALUES (?, ?, ?, ?, 1)')
-    .run(device.id, scenario.type, payload, risk)
+    .prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed, created_at) VALUES (?, ?, ?, ?, 1, ?)')
+    .run(device.id, scenario.type, payload, risk, ts)
 
   const child = db.prepare('SELECT * FROM children WHERE id = ?').get(device.child_id)
 
   if (risk >= 20) {
     db.prepare(`
-      INSERT INTO alerts (family_id, child_id, signal_id, level, category, title, body)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO alerts (family_id, child_id, signal_id, level, category, title, body, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       child.family_id, child.id, sigId, level,
       scenario.type.split('.')[0],
       scenario.title.replace('Emma', child.name).replace('Liam', child.name),
       scenario.body.replace('Emma', child.name).replace('Liam', child.name),
+      ts,
     )
   }
 
   db.prepare('UPDATE devices SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(device.id)
+}
+
+// How many signals per day for each of the past 7 days (index 0 = 7 days ago)
+const DAILY_COUNTS = [3, 5, 2, 6, 4, 7, 3]
+
+function seedHistoricalWeek(devices) {
+  const existing = db.prepare('SELECT COUNT(*) as c FROM signals WHERE device_id IN (' +
+    devices.map(() => '?').join(',') + ')').get(...devices.map(d => d.id)).c
+  if (existing > 10) return // already seeded
+
+  let total = 0
+  for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
+    const count = DAILY_COUNTS[6 - daysAgo]
+    for (let i = 0; i < count; i++) {
+      const scenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)]
+      const device   = devices[Math.floor(Math.random() * devices.length)]
+
+      // Spread signals across random hours of the day
+      const hour   = 8 + Math.floor(Math.random() * 14) // 8am–10pm
+      const minute = Math.floor(Math.random() * 60)
+      const d      = new Date()
+      d.setDate(d.getDate() - daysAgo)
+      d.setHours(hour, minute, 0, 0)
+      const ts = d.toISOString().replace('T', ' ').slice(0, 19)
+
+      fireSignal(device, scenario, ts)
+      total++
+    }
+  }
+  console.log(`[simulator] Seeded ${total} historical signals across 7 days`)
 }
 
 export function startSimulator() {
@@ -162,15 +194,9 @@ export function startSimulator() {
   const { devices } = ensureDemoFamily()
   if (!devices.length) return
 
-  // Seed 5 historical signals immediately so dashboard isn't empty on first load
-  const historical = [...SCENARIOS].sort(() => Math.random() - 0.5).slice(0, 5)
-  historical.forEach((s, i) => {
-    const device = devices[i % devices.length]
-    fireSignal(device, s)
-  })
-  console.log('[simulator] Seeded 5 historical signals')
+  seedHistoricalWeek(devices)
 
-  // Then fire a new signal every 45 seconds to keep the feed live
+  // Fire a new signal every 45 seconds to keep the feed live
   setInterval(() => {
     const scenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)]
     const device   = devices[Math.floor(Math.random() * devices.length)]

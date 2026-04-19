@@ -12,7 +12,11 @@
     "https://www.character.ai/*",
     "https://beta.character.ai/*",
     "https://replika.com/*",
-    "https://www.replika.com/*"
+    "https://www.replika.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://copilot.microsoft.com/*",
+    "https://www.bing.com/chat*"
   ],
 
   "background": {
@@ -22,28 +26,33 @@
 
   "content_scripts": [
     {
-      "matches": [
-        "https://chat.openai.com/*",
-        "https://chatgpt.com/*"
-      ],
+      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
       "js": ["content/chatgpt.js"],
       "run_at": "document_idle"
     },
     {
-      "matches": [
-        "https://character.ai/*",
-        "https://www.character.ai/*",
-        "https://beta.character.ai/*"
-      ],
+      "matches": ["https://character.ai/*", "https://www.character.ai/*", "https://beta.character.ai/*"],
       "js": ["content/characterai.js"],
       "run_at": "document_idle"
     },
     {
-      "matches": [
-        "https://replika.com/*",
-        "https://www.replika.com/*"
-      ],
+      "matches": ["https://replika.com/*", "https://www.replika.com/*"],
       "js": ["content/replika.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["content/claude.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["content/gemini.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://copilot.microsoft.com/*", "https://www.bing.com/chat*"],
+      "js": ["content/copilot.js"],
       "run_at": "document_idle"
     }
   ],
@@ -56,9 +65,9 @@
   "options_page": "options.html",
 
   "icons": {
-    "16": "icons/icon16.png",
-    "32": "icons/icon32.png",
-    "48": "icons/icon48.png",
+    "16":  "icons/icon16.png",
+    "32":  "icons/icon32.png",
+    "48":  "icons/icon48.png",
     "128": "icons/icon128.png"
   }
 }

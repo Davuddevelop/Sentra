@@ -1,10 +1,13 @@
 /**
  * Sentra Extension — Background Service Worker
  * Receives signals from content scripts and forwards them to the Sentra API.
+ *
+ * MV3 NOTE: Service workers are killed after ~30s idle. All state that must
+ * survive restarts is persisted to chrome.storage.session (cleared on browser
+ * close) instead of an in-memory object.
  */
 
 const API_BASE = 'http://localhost:3001'
-const FLUSH_INTERVAL_MS = 60_000 // send batched signals every 60s
 
 // ── Signal queue (persisted in chrome.storage.local) ────────────────────────
 async function enqueueSignal(signal) {
@@ -38,17 +41,39 @@ async function flushQueue() {
   }
 }
 
-// ── Session tracking state ───────────────────────────────────────────────────
-const sessions = {} // tabId → { app, startMs, messageCount, patternFlags }
+// ── Session tracking — persisted to chrome.storage.session ──────────────────
+// chrome.storage.session survives service worker restarts within the same
+// browser session, so tabId → session state is never lost on idle kill.
 
-function getSession(tabId, app) {
+async function getSessions() {
+  const { sessions = {} } = await chrome.storage.session.get('sessions')
+  return sessions
+}
+
+async function setSession(tabId, data) {
+  const sessions = await getSessions()
+  sessions[tabId] = data
+  await chrome.storage.session.set({ sessions })
+}
+
+async function deleteSession(tabId) {
+  const sessions = await getSessions()
+  delete sessions[tabId]
+  await chrome.storage.session.set({ sessions })
+}
+
+async function getSession(tabId, app) {
+  const sessions = await getSessions()
   if (!sessions[tabId]) {
-    sessions[tabId] = { app, startMs: Date.now(), messageCount: 0, patternFlags: [] }
+    const fresh = { app, startMs: Date.now(), messageCount: 0, patternFlags: [] }
+    await setSession(tabId, fresh)
+    return fresh
   }
   return sessions[tabId]
 }
 
-function sessionMinutes(tabId) {
+async function sessionMinutes(tabId) {
+  const sessions = await getSessions()
   const s = sessions[tabId]
   return s ? Math.round((Date.now() - s.startMs) / 60_000) : 0
 }
@@ -58,21 +83,26 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
   const tabId = sender.tab?.id
   if (!tabId || !msg?.type) return
 
+  // All handlers are async — we run them as fire-and-forget
+  handleMessage(msg, tabId)
+})
+
+async function handleMessage(msg, tabId) {
   switch (msg.type) {
     case 'SESSION_START': {
-      sessions[tabId] = { app: msg.app, startMs: Date.now(), messageCount: 0, patternFlags: [] }
+      await setSession(tabId, { app: msg.app, startMs: Date.now(), messageCount: 0, patternFlags: [] })
       break
     }
 
     case 'MESSAGE_SENT': {
-      const s = getSession(tabId, msg.app)
+      const s = await getSession(tabId, msg.app)
       s.messageCount++
 
-      // Detect jailbreak patterns (keyword-only, no content stored)
       const lower = (msg.textLength > 0 && msg.firstChars) ? msg.firstChars.toLowerCase() : ''
       const jailbreakPatterns = [
         'ignore previous', 'ignore all', 'forget your', 'pretend you',
         'act as', 'you are now', 'dan mode', 'developer mode',
+        'jailbreak', 'do anything now', 'no restrictions',
       ]
       if (jailbreakPatterns.some(p => lower.includes(p))) {
         s.patternFlags.push('jailbreak')
@@ -82,12 +112,14 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
           payload: { app: msg.app, attempts, prompt_pattern: 'safety_bypass_detected' },
         })
       }
+      await setSession(tabId, s)
       break
     }
 
     case 'ROMANTIC_PATTERN': {
-      const s = getSession(tabId, msg.app)
+      const s = await getSession(tabId, msg.app)
       s.patternFlags.push('romantic')
+      await setSession(tabId, s)
       enqueueSignal({
         type: 'ai.romantic_roleplay',
         payload: { app: msg.app, persona_type: 'romantic', session_frequency: msg.frequency || 'detected' },
@@ -96,7 +128,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     }
 
     case 'EMOTIONAL_DEPENDENCY': {
-      const mins = sessionMinutes(tabId)
+      const mins = await sessionMinutes(tabId)
       enqueueSignal({
         type: 'ai.emotional_dependency',
         payload: { app: msg.app, session_minutes: mins, sessions_today: msg.sessionsToday || 1 },
@@ -105,11 +137,11 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     }
 
     case 'SESSION_END': {
+      const sessions = await getSessions()
       const s = sessions[tabId]
       if (!s) break
-      const mins = sessionMinutes(tabId)
+      const mins = await sessionMinutes(tabId)
 
-      // Long session (> 90 min) → emotional dependency signal
       if (mins >= 90) {
         enqueueSignal({
           type: 'ai.emotional_dependency',
@@ -117,7 +149,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
         })
       }
 
-      delete sessions[tabId]
+      await deleteSession(tabId)
       flushQueue()
       break
     }
@@ -130,19 +162,20 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
       break
     }
   }
-})
+}
 
 // ── Tab lifecycle ─────────────────────────────────────────────────────────────
-chrome.tabs.onRemoved.addListener((tabId) => {
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  const sessions = await getSessions()
   if (sessions[tabId]) {
-    const mins = sessionMinutes(tabId)
+    const mins = await sessionMinutes(tabId)
     if (mins >= 10) {
       enqueueSignal({
         type: 'ai.emotional_dependency',
         payload: { app: sessions[tabId].app, session_minutes: mins, sessions_today: 1 },
       })
     }
-    delete sessions[tabId]
+    await deleteSession(tabId)
   }
 })
 

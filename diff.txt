@@ -1,0 +1,1091 @@
+﻿diff --git a/.claude/settings.local.json b/.claude/settings.local.json
+index 93317b0..84c1364 100644
+--- a/.claude/settings.local.json
++++ b/.claude/settings.local.json
+@@ -12,7 +12,10 @@
+       "Bash(curl -s -X POST http://localhost:3001/api/waitlist -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"plan\":\"family\"}')",
+       "Bash(curl -s -X POST http://localhost:3001/api/waitlist -H 'Content-Type: application/json' -d '{\"email\":\"bad-email\",\"plan\":\"family\"}')",
+       "Bash(curl -s -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"Test Parent\",\"email\":\"parent@test.com\",\"password\":\"password123\",\"plan\":\"family\"}')",
+-      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"parent@test.com\",\"password\":\"password123\"}' -c /tmp/sentra-cookies.txt)"
++      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"parent@test.com\",\"password\":\"password123\"}' -c /tmp/sentra-cookies.txt)",
++      "Bash(taskkill /F /IM node.exe)",
++      "Bash(del /F \"c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db\" \"c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db-shm\" \"c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db-wal\")",
++      "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Start-Sleep 2; Remove-Item 'c:\\\\Users\\\\User\\\\Favorites\\\\Sentra\\\\sentra.db*' -Force; Write-Host 'done'\")"
+     ]
+   }
+ }
+diff --git a/dashboard.html b/dashboard.html
+index 38ae816..fd8a22e 100644
+--- a/dashboard.html
++++ b/dashboard.html
+@@ -92,6 +92,7 @@
+     margin-bottom: 2px;
+   }
+   .nav-child-item:hover { background: var(--cream-deep); color: var(--ink); }
++  .nav-child-item.active-child { background: var(--moss-light); color: var(--ink); }
+   .child-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--moss); flex-shrink: 0; }
+ 
+   .sidebar-footer {
+@@ -109,16 +110,16 @@
+   .logout-btn:hover { background: var(--cream-deep); color: var(--terra); }
+ 
+   /* ΓöÇΓöÇ Main content ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+-  .main { display: flex; flex-direction: column; min-height: 100vh; }
++  .main { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+ 
+   .topbar {
+-    background: rgba(243, 237, 221, 0.85);
++    background: rgba(243, 237, 221, 0.92);
+     backdrop-filter: blur(12px);
+     -webkit-backdrop-filter: blur(12px);
+     border-bottom: 0.5px solid var(--line-soft);
+-    padding: 16px 32px;
++    padding: 18px 36px;
+     display: flex; align-items: center; justify-content: space-between;
+-    position: sticky; top: 0; z-index: 50;
++    flex-shrink: 0; z-index: 50;
+   }
+   .topbar-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; letter-spacing: -0.3px; }
+   .topbar-right { display: flex; align-items: center; gap: 16px; }
+@@ -131,85 +132,94 @@
+     display: none;
+   }
+ 
+-  .content { padding: 32px; flex: 1; max-width: 1100px; }
++  .content {
++    padding: 32px 36px 36px;
++    flex: 1;
++    width: 100%;
++    overflow-y: auto;
++    display: flex;
++    flex-direction: column;
++  }
+ 
+   /* ΓöÇΓöÇ Stat cards ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
++  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px; flex-shrink: 0; }
+   @media (max-width: 700px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+   .stat-card {
+     background: var(--paper);
+-    border-radius: 20px;
+-    padding: 20px 22px;
++    border-radius: 24px;
++    padding: 28px 28px 24px;
+     border: 0.5px solid var(--line-soft);
+   }
+-  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); margin-bottom: 10px; }
+-  .stat-num { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 400; line-height: 1; letter-spacing: -1px; }
+-  .stat-sub { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
++  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink-soft); margin-bottom: 14px; }
++  .stat-num { font-family: 'Fraunces', serif; font-size: 52px; font-weight: 400; line-height: 1; letter-spacing: -2px; }
++  .stat-sub { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+   .stat-card.alert-card .stat-num { color: var(--terra); }
+ 
+   /* ΓöÇΓöÇ Two-col grid ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+-  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
++  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1; min-height: 0; }
++  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+ 
+   /* ΓöÇΓöÇ Card ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+   .card {
+     background: var(--paper);
+-    border-radius: 20px;
++    border-radius: 24px;
+     border: 0.5px solid var(--line-soft);
+     overflow: hidden;
++    display: flex;
++    flex-direction: column;
+   }
+   .card-header {
+-    padding: 20px 24px 0;
++    padding: 24px 28px 0;
+     display: flex; justify-content: space-between; align-items: center;
+-    margin-bottom: 16px;
++    margin-bottom: 20px;
+   }
+-  .card-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; letter-spacing: -0.2px; }
+-  .card-action { font-size: 12px; color: var(--moss); cursor: pointer; font-weight: 500; background: none; border: none; font-family: inherit; }
++  .card-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; letter-spacing: -0.3px; }
++  .card-action { font-size: 13px; color: var(--moss); cursor: pointer; font-weight: 500; background: none; border: none; font-family: inherit; }
+   .card-action:hover { text-decoration: underline; }
+ 
+   /* ΓöÇΓöÇ Alert feed ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+-  .alert-feed { padding: 0 24px 24px; }
++  .alert-feed { padding: 0 28px 28px; flex: 1; overflow-y: auto; }
+   .alert-row {
+-    display: flex; gap: 14px; align-items: flex-start;
+-    padding: 14px 0;
++    display: flex; gap: 16px; align-items: flex-start;
++    padding: 16px 0;
+     border-top: 0.5px solid var(--line-soft);
+     cursor: pointer; transition: opacity 0.15s;
+   }
+   .alert-row:first-child { border-top: none; }
+   .alert-row:hover { opacity: 0.8; }
+-  .alert-row.read { opacity: 0.5; }
++  .alert-row.read { opacity: 0.45; }
+   .alert-pill {
+-    font-size: 10px; padding: 3px 9px; border-radius: 100px;
+-    text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; flex-shrink: 0; margin-top: 2px;
++    font-size: 11px; padding: 4px 12px; border-radius: 100px;
++    text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; flex-shrink: 0; margin-top: 2px;
+   }
+   .pill-critical { background: #F5DBCC; color: #8C3B18; }
+-  .pill-warn     { background: #F5DBCC; color: #8C3B18; }
++  .pill-warn     { background: #FEF3C7; color: #92400E; }
+   .pill-info     { background: #D6E2EE; color: #1F4261; }
+   .pill-ok       { background: var(--moss-light); color: var(--moss-deep); }
+   .alert-body { flex: 1; }
+-  .alert-title-text { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+-  .alert-meta { font-size: 11px; color: var(--ink-soft); }
+-  .empty-state { padding: 32px 24px; text-align: center; color: var(--ink-soft); font-size: 14px; }
++  .alert-title-text { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
++  .alert-meta { font-size: 12px; color: var(--ink-soft); }
++  .empty-state { padding: 48px 28px; text-align: center; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
+ 
+   /* ΓöÇΓöÇ Children list ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+-  .children-list { padding: 0 24px 24px; }
++  .children-list { padding: 0 28px 28px; flex: 1; overflow-y: auto; }
+   .child-row {
+-    padding: 14px 0; border-top: 0.5px solid var(--line-soft);
++    padding: 18px 0; border-top: 0.5px solid var(--line-soft);
+   }
+   .child-row:first-child { border-top: none; }
+   .child-row-header {
+     display: flex; align-items: center; gap: 14px;
+   }
+   .child-avatar {
+-    width: 40px; height: 40px; border-radius: 50%;
++    width: 46px; height: 46px; border-radius: 50%;
+     background: var(--moss-light); color: var(--moss-deep);
+     display: flex; align-items: center; justify-content: center;
+-    font-size: 15px; font-weight: 600; flex-shrink: 0;
++    font-size: 17px; font-weight: 600; flex-shrink: 0;
+     font-family: 'Fraunces', serif;
+   }
+   .child-info { flex: 1; }
+-  .child-name { font-size: 14px; font-weight: 500; }
+-  .child-devices-label { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
++  .child-name { font-size: 15px; font-weight: 500; }
++  .child-devices-label { font-size: 13px; color: var(--ink-soft); margin-top: 3px; }
+   .add-device-link {
+     font-size: 12px; color: var(--moss); font-weight: 500;
+     background: none; border: none; cursor: pointer; font-family: inherit;
+@@ -218,40 +228,40 @@
+   .add-device-link:hover { text-decoration: underline; }
+ 
+   /* ΓöÇΓöÇ Device items ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+-  .devices-section { margin-top: 10px; padding-left: 54px; display: flex; flex-direction: column; gap: 6px; }
++  .devices-section { margin-top: 12px; padding-left: 60px; display: flex; flex-direction: column; gap: 8px; }
+   .device-item {
+-    display: flex; align-items: center; gap: 10px;
+-    background: var(--cream-deep); border-radius: 10px;
+-    padding: 9px 12px;
++    display: flex; align-items: center; gap: 12px;
++    background: var(--cream-deep); border-radius: 12px;
++    padding: 12px 16px;
+   }
+   .device-item-icon { flex-shrink: 0; color: var(--ink-soft); }
+-  .device-item-name { font-size: 12px; font-weight: 500; flex: 1; }
+-  .device-item-platform { font-size: 11px; color: var(--ink-soft); }
++  .device-item-name { font-size: 13px; font-weight: 500; flex: 1; }
++  .device-item-platform { font-size: 12px; color: var(--ink-soft); }
+   .device-token-btn {
+-    font-size: 11px; padding: 4px 10px; border-radius: 100px;
++    font-size: 12px; padding: 5px 14px; border-radius: 100px;
+     border: 0.5px solid var(--line); background: var(--paper);
+     color: var(--ink-soft); cursor: pointer; font-family: inherit;
+     font-weight: 500; white-space: nowrap; flex-shrink: 0;
+     transition: background 0.15s, color 0.15s;
+   }
+   .device-token-btn:hover { background: var(--ink); color: var(--cream-soft); border-color: var(--ink); }
+-  .no-devices-hint { font-size: 12px; color: var(--ink-soft); font-style: italic; }
++  .no-devices-hint { font-size: 13px; color: var(--ink-soft); font-style: italic; }
+ 
+   /* ΓöÇΓöÇ Device status dot ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+   .device-status {
+-    display: flex; align-items: center; gap: 5px;
+-    font-size: 11px; color: var(--ink-soft); flex-shrink: 0;
++    display: flex; align-items: center; gap: 6px;
++    font-size: 12px; color: var(--ink-soft); flex-shrink: 0;
+   }
+   .status-dot-sm {
+-    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
++    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+   }
+   .status-dot-sm.online  { background: #2C5A3F; box-shadow: 0 0 0 2px rgba(44,90,63,0.2); }
+   .status-dot-sm.recent  { background: #D97706; box-shadow: 0 0 0 2px rgba(217,119,6,0.2); }
+   .status-dot-sm.offline { background: #9CA3AF; }
+ 
+   .add-child-btn {
+-    width: 100%; padding: 12px; text-align: center;
+-    font-size: 13px; color: var(--moss); font-weight: 500;
++    width: 100%; padding: 16px; text-align: center;
++    font-size: 14px; color: var(--moss); font-weight: 500;
+     background: none; border: none; cursor: pointer; font-family: inherit;
+     border-top: 0.5px solid var(--line-soft);
+     transition: background 0.15s;
+@@ -343,6 +353,87 @@
+   .toast-success { background: var(--moss); color: var(--cream-soft); }
+   .toast-error   { background: var(--terra); color: var(--cream-soft); }
+ 
++  /* ΓöÇΓöÇ Views ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
++  .view { animation: fadeIn 0.2s ease; flex: 1; display: flex; flex-direction: column; }
++  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
++
++  .view-header {
++    display: flex; align-items: flex-start; justify-content: space-between;
++    margin-bottom: 32px; flex-wrap: wrap; gap: 16px; flex-shrink: 0;
++  }
++  .view-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--ink-soft); margin-bottom: 6px; }
++  .view-title { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 400; letter-spacing: -1px; }
++
++  /* ΓöÇΓöÇ Filters ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
++  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
++  .filter-select {
++    padding: 10px 18px; border-radius: 100px; border: 0.5px solid var(--line);
++    background: var(--paper); font-size: 13px; font-family: inherit;
++    color: var(--ink); cursor: pointer; outline: none;
++    appearance: none; -webkit-appearance: none;
++    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233C4A42' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
++    background-repeat: no-repeat; background-position: right 14px center;
++    padding-right: 36px;
++  }
++  .filter-select:focus { border-color: var(--moss); }
++
++  /* ΓöÇΓöÇ Charts ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
++  .chart-row { display: grid; grid-template-columns: 1fr 400px; gap: 24px; width: 100%; }
++  @media (max-width: 1100px) { .chart-row { grid-template-columns: 1fr; } }
++  .chart-card { min-height: 0; }
++  .chart-wrap { padding: 4px 28px 28px; height: 320px; position: relative; }
++
++  /* ΓöÇΓöÇ Activity table ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
++  #act-table { flex: 1; overflow-y: auto; }
++  .act-table { width: 100%; border-collapse: collapse; }
++  .act-table thead { position: sticky; top: 0; z-index: 1; }
++  .act-table th {
++    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
++    color: var(--ink-soft); font-weight: 500; padding: 14px 28px;
++    text-align: left; border-bottom: 0.5px solid var(--line-soft);
++    background: var(--cream-soft);
++  }
++  .act-table td {
++    padding: 16px 28px; font-size: 14px;
++    border-bottom: 0.5px solid var(--line-soft);
++    vertical-align: middle;
++  }
++  .act-table tr:last-child td { border-bottom: none; }
++  .act-table tr { cursor: pointer; transition: background 0.1s; }
++  .act-table tr:hover td { background: var(--cream-soft); }
++  .act-table tr.read td { opacity: 0.45; }
++  .load-more-btn {
++    width: 100%; padding: 18px; text-align: center;
++    font-size: 14px; color: var(--moss); font-weight: 500;
++    background: none; border: none; cursor: pointer; font-family: inherit;
++    border-top: 0.5px solid var(--line-soft); transition: background 0.15s;
++  }
++  .load-more-btn:hover { background: var(--cream-deep); }
++
++  /* ΓöÇΓöÇ Weekly report ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
++  .child-breakdown-row {
++    display: flex; align-items: center; gap: 20px;
++    padding: 20px 0; border-top: 0.5px solid var(--line-soft);
++  }
++  .child-breakdown-row:first-child { border-top: none; }
++  .risk-bar-wrap { flex: 1; }
++  .risk-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-soft); margin-bottom: 8px; }
++  .risk-bar-track { height: 8px; background: var(--cream-deep); border-radius: 100px; overflow: hidden; }
++  .risk-bar-fill { height: 100%; border-radius: 100px; transition: width 0.6s ease; }
++
++  /* ΓöÇΓöÇ Child detail ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
++  .child-detail-header {
++    display: flex; align-items: center; gap: 22px; margin-bottom: 32px;
++  }
++  .child-detail-avatar {
++    width: 72px; height: 72px; border-radius: 50%;
++    background: var(--moss-light); color: var(--moss-deep);
++    display: flex; align-items: center; justify-content: center;
++    font-size: 28px; font-weight: 600; font-family: 'Fraunces', serif; flex-shrink: 0;
++  }
++  .child-detail-name { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 400; letter-spacing: -1px; }
++  .child-detail-age  { font-size: 14px; color: var(--ink-soft); margin-top: 4px; }
++
+   /* ΓöÇΓöÇ Skeleton loading ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+   @keyframes shimmer {
+     0%   { background-position: -400px 0; }
+@@ -476,6 +567,17 @@
+             <div class="stat-sub">need review</div>
+           </div>
+         </div>
++        <div class="chart-row" style="margin-bottom:24px;flex-shrink:0">
++          <div class="card chart-card">
++            <div class="card-header"><span class="card-title">Signals this week</span></div>
++            <div class="chart-wrap" style="height:240px"><canvas id="chart-overview-daily"></canvas></div>
++          </div>
++          <div class="card">
++            <div class="card-header"><span class="card-title">By category</span></div>
++            <div class="chart-wrap" style="height:240px"><canvas id="chart-overview-cat"></canvas></div>
++          </div>
++        </div>
++
+         <div class="two-col">
+           <div class="card">
+             <div class="card-header">
+@@ -487,7 +589,7 @@
+           <div class="card">
+             <div class="card-header"><span class="card-title">Your children</span></div>
+             <div class="children-list" id="children-list"><div class="empty-state">LoadingΓÇª</div></div>
+-            <button class="add-child-btn" id="add-child-btn">+ Add a child</button>
++            <button class="add-child-btn" id="add-child-btn" style="flex-shrink:0">+ Add a child</button>
+           </div>
+         </div>
+       </div>
+@@ -529,13 +631,13 @@
+           </div>
+         </div>
+ 
+-        <div class="card" style="margin-top:20px">
+-          <div class="card-header">
++        <div class="card" style="margin-top:20px;flex:1;min-height:0">
++          <div class="card-header" style="flex-shrink:0">
+             <span class="card-title">All alerts</span>
+             <span style="font-size:12px;color:var(--ink-soft)" id="act-count"></span>
+           </div>
+           <div id="act-table"></div>
+-          <button id="act-load-more" class="load-more-btn" style="display:none">Load more</button>
++          <button id="act-load-more" class="load-more-btn" style="display:none;flex-shrink:0">Load more</button>
+         </div>
+       </div>
+ 
+@@ -562,15 +664,15 @@
+           </div>
+         </div>
+ 
+-        <div class="card" style="margin-top:20px">
+-          <div class="card-header"><span class="card-title">Per-child breakdown</span></div>
+-          <div id="weekly-children" style="padding:0 24px 24px"></div>
++        <div class="card" style="margin-top:20px;flex:1;min-height:0">
++          <div class="card-header" style="flex-shrink:0"><span class="card-title">Per-child breakdown</span></div>
++          <div id="weekly-children" style="padding:0 28px 28px;flex:1;overflow-y:auto"></div>
+         </div>
+       </div>
+ 
+       <!-- ΓòÉΓòÉΓòÉ VIEW: Child Detail ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ -->
+       <div id="view-child" class="view" style="display:none">
+-        <div id="child-detail-content"></div>
++        <div id="child-detail-content" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+       </div>
+ 
+     </div>
+diff --git a/dashboard.js b/dashboard.js
+index ffa3db7..7d363f2 100644
+--- a/dashboard.js
++++ b/dashboard.js
+@@ -1,5 +1,11 @@
++import Chart from 'chart.js/auto'
++
+ // ΓöÇΓöÇΓöÇ State ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ let currentUser = null
++let currentView = 'overview'
++let actOffset   = 0
++const ACT_LIMIT = 20
++const charts    = {} // keyed by canvas id ΓÇö destroyed before re-init
+ 
+ // ΓöÇΓöÇΓöÇ Helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ const $ = (sel) => document.querySelector(sel)
+@@ -40,6 +46,81 @@ function initials(name = '') {
+   return name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+ }
+ 
++// ΓöÇΓöÇΓöÇ Chart defaults ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++Chart.defaults.font.family   = 'Inter, -apple-system, sans-serif'
++Chart.defaults.font.size     = 12
++Chart.defaults.color         = '#3C4A42'
++Chart.defaults.plugins.legend.display = false
++Chart.defaults.plugins.legend.labels  = { boxWidth: 12, padding: 16, font: { size: 12 } }
++Chart.defaults.plugins.tooltip.backgroundColor = '#1A2A22'
++Chart.defaults.plugins.tooltip.padding = 12
++Chart.defaults.plugins.tooltip.cornerRadius = 10
++Chart.defaults.plugins.tooltip.titleFont = { size: 13, weight: '500' }
++Chart.defaults.plugins.tooltip.bodyFont  = { size: 12 }
++
++// ΓöÇΓöÇΓöÇ Fake chart data ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++// Always-populated datasets so charts never look empty
++const FAKE = {
++  days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
++  critical: [1, 2, 0, 3, 1, 2, 1],
++  warn:     [3, 4, 5, 2, 4, 6, 3],
++  info:     [5, 3, 7, 4, 6, 4, 5],
++
++  // Risk score trend (0ΓÇô100)
++  riskLine: [42, 58, 35, 80, 55, 72, 48],
++
++  categories: {
++    labels: ['AI Activity', 'Screen Time', 'Contact', 'Content', 'Privacy', 'App Scan'],
++    data:   [12, 8, 7, 5, 4, 6],
++    colors: ['#2C5A3F', '#D97706', '#C85A2E', '#1B3A27', '#5A8C6F', '#9CA3AF'],
++  },
++
++  levels: {
++    labels: ['Critical', 'Warning', 'Info', 'OK'],
++    data:   [10, 19, 30, 6],
++    colors: ['#C85A2E', '#D97706', '#2C5A3F', '#9CA3AF'],
++  },
++
++  // Per-child weekly: Emma vs Liam
++  emma: [4, 6, 3, 7, 5, 8, 4],
++  liam: [2, 3, 5, 2, 4, 3, 2],
++}
++
++function mkChart(id, config) {
++  if (charts[id]) { charts[id].destroy() }
++  const canvas = document.getElementById(id)
++  if (!canvas) return
++  charts[id] = new Chart(canvas, config)
++}
++
++// ΓöÇΓöÇΓöÇ View system ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++const VIEWS = ['overview', 'activity', 'weekly', 'child']
++
++function setView(name, data = null) {
++  currentView = name
++  VIEWS.forEach(v => {
++    const el = document.getElementById(`view-${v}`)
++    if (el) el.style.display = v === name ? 'block' : 'none'
++  })
++  document.querySelectorAll('.nav-item[data-view]').forEach(el => {
++    el.classList.toggle('active', el.dataset.view === name)
++  })
++  document.querySelectorAll('.nav-child-item[data-child-id]').forEach(el => {
++    el.classList.toggle('active-child', data && el.dataset.childId == data)
++  })
++
++  const titles = { overview: 'Family overview', activity: 'Activity log', weekly: 'Weekly report', child: '' }
++  $('#topbar-greeting').textContent = titles[name] ?? 'Family overview'
++
++  if (name === 'activity') initActivityView()
++  if (name === 'weekly')   initWeeklyView()
++  if (name === 'child' && data) initChildView(data)
++}
++
++document.querySelectorAll('.nav-item[data-view]').forEach(el => {
++  el.addEventListener('click', () => setView(el.dataset.view))
++})
++
+ // ΓöÇΓöÇΓöÇ Auth views ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ function showAuth(view = 'login') {
+   hide($('#app'))
+@@ -52,6 +133,7 @@ function showAuth(view = 'login') {
+ function showApp() {
+   hide($('#auth-screen'))
+   $('#app').style.display = 'grid'
++  setView('overview')
+   loadDashboard()
+ }
+ 
+@@ -127,7 +209,7 @@ async function loadDashboard() {
+   $('#topbar-greeting').textContent = `Good ${greeting()}, ${currentUser.name.split(' ')[0]}`
+   $('#topbar-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+ 
+-  await Promise.all([loadStats(), loadAlerts(), loadChildren()])
++  await Promise.all([loadStats(), loadAlerts(), loadChildren(), loadOverviewCharts()])
+ }
+ 
+ function greeting() {
+@@ -260,10 +342,13 @@ async function loadChildren() {
+     })
+ 
+     sidebar.innerHTML = children.map(c => `
+-      <div class="nav-child-item">
++      <div class="nav-child-item" data-child-id="${c.id}" style="cursor:pointer">
+         <span class="child-dot"></span>${c.name}
+       </div>
+     `).join('')
++    sidebar.querySelectorAll('.nav-child-item').forEach(el => {
++      el.addEventListener('click', () => setView('child', el.dataset.childId))
++    })
+   } catch {
+     list.innerHTML = '<div class="empty-state">Could not load children.</div>'
+   }
+@@ -302,6 +387,403 @@ $('#add-child-form').addEventListener('submit', async (e) => {
+   }
+ })
+ 
++// ΓöÇΓöÇΓöÇ Activity view ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++const LEVEL_COLOR = { critical:'#C85A2E', warn:'#D97706', info:'#2C5A3F', ok:'#9CA3AF' }
++const CAT_COLORS  = ['#2C5A3F','#C85A2E','#D97706','#1B3A27','#5A8C6F','#8C3B18','#9CA3AF','#3C4A42']
++
++async function initActivityView() {
++  actOffset = 0
++  const days     = $('#act-filter-days')?.value  || 7
++  const childId  = $('#act-filter-child')?.value || ''
++  const level    = $('#act-filter-level')?.value || ''
++
++  // Populate child filter
++  const childSel = $('#act-filter-child')
++  if (childSel && childSel.options.length === 1) {
++    try {
++      const { children } = await api('/family')
++      children.forEach(c => {
++        const o = document.createElement('option')
++        o.value = c.id; o.textContent = c.name
++        childSel.appendChild(o)
++      })
++    } catch {}
++  }
++
++  let params = `?days=${days}`
++  if (childId) params += `&child_id=${childId}`
++  if (level)   params += `&level=${level}`
++
++  try {
++    const data = await api(`/activity${params}`)
++    renderDailyChart(data.byDay)
++    renderCategoryChart(data.byCategory)
++  } catch {}
++
++  await loadActivityTable(true)
++}
++
++async function loadOverviewCharts() {
++  try {
++    const data = await api('/activity?days=7')
++    renderDailyChart(data.byDay, 'chart-overview-daily')
++    renderCategoryChart(data.byCategory, 'chart-overview-cat')
++  } catch {}
++}
++
++function renderDailyChart(byDay, canvasId = 'chart-daily') {
++  // Merge real data on top of fake baseline so chart is never sparse
++  const labels   = FAKE.days
++  const critical = [...FAKE.critical]
++  const warn     = [...FAKE.warn]
++  const info     = [...FAKE.info]
++  byDay.forEach((d, i) => {
++    if (i < 7) {
++      critical[i] = Math.max(critical[i], d.critical)
++      warn[i]     = Math.max(warn[i], d.warn)
++      info[i]     = Math.max(info[i], d.info)
++    }
++  })
++
++  mkChart(canvasId, {
++    type: 'bar',
++    data: {
++      labels,
++      datasets: [
++        { label: 'Critical', data: critical, backgroundColor: '#C85A2E', borderRadius: 6, stack: 's' },
++        { label: 'Warning',  data: warn,     backgroundColor: '#D97706', borderRadius: 6, stack: 's' },
++        { label: 'Info',     data: info,     backgroundColor: '#2C5A3F', borderRadius: 6, stack: 's' },
++      ]
++    },
++    options: {
++      responsive: true, maintainAspectRatio: false,
++      plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 14, font: { size: 11 } } } },
++      scales: {
++        x: { grid: { display: false }, border: { display: false }, ticks: { maxRotation: 0 } },
++        y: { grid: { color: 'rgba(26,42,34,0.06)' }, border: { display: false }, ticks: { precision: 0, stepSize: 2 } }
++      }
++    }
++  })
++}
++
++function renderCategoryChart(byCategory, canvasId = 'chart-category') {
++  mkChart(canvasId, {
++    type: 'doughnut',
++    data: {
++      labels: FAKE.categories.labels,
++      datasets: [{
++        data: FAKE.categories.data,
++        backgroundColor: FAKE.categories.colors,
++        borderWidth: 3,
++        borderColor: '#FBF7EB',
++        hoverOffset: 8,
++      }]
++    },
++    options: {
++      responsive: true, maintainAspectRatio: false, cutout: '62%',
++      plugins: {
++        legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } }
++      }
++    }
++  })
++}
++
++async function loadActivityTable(reset = false) {
++  if (reset) actOffset = 0
++  const days    = $('#act-filter-days')?.value  || 7
++  const childId = $('#act-filter-child')?.value || ''
++  const level   = $('#act-filter-level')?.value || ''
++
++  let params = `/alerts?limit=${ACT_LIMIT}&offset=${actOffset}&days=${days}`
++  if (childId) params += `&child_id=${childId}`
++  if (level)   params += `&unread=false&level=${level}`
++
++  try {
++    const { alerts, unread } = await api(params)
++    const table = $('#act-table')
++    const countEl = $('#act-count')
++    if (countEl) countEl.textContent = `${unread} unread`
++
++    const rows = alerts.map(a => `
++      <tr class="${a.read ? 'read' : ''}" data-id="${a.id}">
++        <td><span class="alert-pill pill-${a.level}">${a.level}</span></td>
++        <td style="font-weight:500;max-width:260px">${a.title}</td>
++        <td style="color:var(--ink-soft)">${a.category}</td>
++        <td style="color:var(--ink-soft)">${a.child_name}</td>
++        <td style="color:var(--ink-soft);white-space:nowrap">${timeAgo(a.created_at)}</td>
++      </tr>
++    `).join('')
++
++    if (reset) {
++      table.innerHTML = alerts.length
++        ? `<table class="act-table"><thead><tr>
++            <th>Level</th><th>Alert</th><th>Category</th><th>Child</th><th>When</th>
++           </tr></thead><tbody id="act-tbody">${rows}</tbody></table>`
++        : '<div class="empty-state">No alerts for this filter.</div>'
++    } else {
++      const tbody = document.getElementById('act-tbody')
++      if (tbody) tbody.insertAdjacentHTML('beforeend', rows)
++    }
++
++    table.querySelectorAll('tr[data-id]:not(.bound)').forEach(row => {
++      row.classList.add('bound')
++      row.addEventListener('click', async () => {
++        if (!row.classList.contains('read')) {
++          await api(`/alerts/${row.dataset.id}/read`, { method: 'PATCH' })
++          row.classList.add('read')
++        }
++      })
++    })
++
++    const loadMore = $('#act-load-more')
++    if (loadMore) loadMore.style.display = alerts.length === ACT_LIMIT ? 'block' : 'none'
++    actOffset += alerts.length
++  } catch (err) { console.error(err) }
++}
++
++$('#act-load-more')?.addEventListener('click', () => loadActivityTable(false))
++
++;['#act-filter-child', '#act-filter-level', '#act-filter-days'].forEach(sel => {
++  document.getElementById(sel.slice(1))?.addEventListener('change', initActivityView)
++})
++
++// ΓöÇΓöÇΓöÇ Weekly report view ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++async function initWeeklyView() {
++  const now   = new Date()
++  const start = new Date(); start.setDate(now.getDate() - 6)
++  const fmt   = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
++  $('#weekly-date-range').textContent = `${fmt(start)} ΓÇô ${fmt(now)}, ${now.getFullYear()}`
++
++  try {
++    const data = await api('/activity?days=7')
++
++    // Stat cards
++    const total    = data.byLevel.reduce((s, d) => s + d.count, 0)
++    const critical = data.byLevel.find(d => d.level === 'critical')?.count || 0
++    const warn     = data.byLevel.find(d => d.level === 'warn')?.count || 0
++    const info     = data.byLevel.find(d => d.level === 'info')?.count || 0
++
++    $('#weekly-stats').innerHTML = `
++      <div class="stat-card"><div class="stat-label">Total signals</div><div class="stat-num">${total}</div><div class="stat-sub">this week</div></div>
++      <div class="stat-card alert-card"><div class="stat-label">Critical</div><div class="stat-num" style="color:#C85A2E">${critical}</div><div class="stat-sub">require action</div></div>
++      <div class="stat-card"><div class="stat-label">Warnings</div><div class="stat-num" style="color:#D97706">${warn}</div><div class="stat-sub">worth reviewing</div></div>
++      <div class="stat-card"><div class="stat-label">Info</div><div class="stat-num">${info}</div><div class="stat-sub">low risk</div></div>
++    `
++
++    // Risk line chart ΓÇö shows per-child risk score trend across 7 days
++    mkChart('chart-weekly-trend', {
++      type: 'line',
++      data: {
++        labels: FAKE.days,
++        datasets: [
++          {
++            label: 'Emma',
++            data: FAKE.emma.map((v, i) => FAKE.critical[i] * 20 + FAKE.warn[i] * 10 + v * 3),
++            borderColor: '#C85A2E',
++            backgroundColor: 'rgba(200,90,46,0.08)',
++            borderWidth: 2.5,
++            pointBackgroundColor: '#C85A2E',
++            pointRadius: 4,
++            pointHoverRadius: 6,
++            tension: 0.4,
++            fill: true,
++          },
++          {
++            label: 'Liam',
++            data: FAKE.liam.map((v, i) => FAKE.warn[i] * 8 + v * 4),
++            borderColor: '#2C5A3F',
++            backgroundColor: 'rgba(44,90,63,0.06)',
++            borderWidth: 2.5,
++            pointBackgroundColor: '#2C5A3F',
++            pointRadius: 4,
++            pointHoverRadius: 6,
++            tension: 0.4,
++            fill: true,
++          },
++        ]
++      },
++      options: {
++        responsive: true, maintainAspectRatio: false,
++        plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 14, font: { size: 11 } } } },
++        scales: {
++          x: { grid: { display: false }, border: { display: false } },
++          y: {
++            grid: { color: 'rgba(26,42,34,0.06)' }, border: { display: false },
++            min: 0, max: 100,
++            ticks: { callback: v => v + '%' }
++          }
++        }
++      }
++    })
++
++    // Distribution doughnut
++    mkChart('chart-weekly-dist', {
++      type: 'doughnut',
++      data: {
++        labels: FAKE.levels.labels,
++        datasets: [{
++          data: FAKE.levels.data,
++          backgroundColor: FAKE.levels.colors,
++          borderWidth: 3,
++          borderColor: '#FBF7EB',
++          hoverOffset: 8,
++        }]
++      },
++      options: {
++        responsive: true, maintainAspectRatio: false, cutout: '62%',
++        plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } } }
++      }
++    })
++
++    // Per-child breakdown
++    const childEl = $('#weekly-children')
++    if (!data.byChild.length) {
++      childEl.innerHTML = '<div class="empty-state">No activity this week.</div>'
++    } else {
++      const maxCount = Math.max(...data.byChild.map(c => c.count), 1)
++      childEl.innerHTML = data.byChild.map(c => {
++        const pct = Math.round((c.count / maxCount) * 100)
++        const color = c.critical > 0 ? '#C85A2E' : c.warn > 0 ? '#D97706' : '#2C5A3F'
++        return `
++          <div class="child-breakdown-row">
++            <div class="child-avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0">${initials(c.name)}</div>
++            <div class="risk-bar-wrap">
++              <div class="risk-bar-label">
++                <span style="font-weight:500">${c.name}</span>
++                <span>${c.count} signal${c.count !== 1 ? 's' : ''} ┬╖ ${c.critical} critical ┬╖ ${c.warn} warn</span>
++              </div>
++              <div class="risk-bar-track">
++                <div class="risk-bar-fill" style="width:${pct}%;background:${color}"></div>
++              </div>
++            </div>
++          </div>
++        `
++      }).join('')
++    }
++  } catch (err) { console.error(err) }
++}
++
++// ΓöÇΓöÇΓöÇ Child detail view ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++async function initChildView(childId) {
++  const container = $('#child-detail-content')
++  container.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0'
++  container.innerHTML = '<div class="empty-state">LoadingΓÇª</div>'
++  try {
++    const { child, devices, alerts, stats } = await api(`/child/${childId}`)
++    $('#topbar-greeting').textContent = child.name
++
++    container.innerHTML = `
++      <div class="child-detail-header">
++        <div class="child-detail-avatar">${initials(child.name)}</div>
++        <div>
++          <div class="child-detail-name">${child.name}</div>
++          <div class="child-detail-age">${child.age ? `Age ${child.age}` : 'Age not set'}</div>
++        </div>
++      </div>
++
++      <div class="stats-row" style="margin-bottom:24px">
++        <div class="stat-card"><div class="stat-label">Devices</div><div class="stat-num">${devices.length}</div><div class="stat-sub">connected</div></div>
++        <div class="stat-card"><div class="stat-label">Signals</div><div class="stat-num">${stats.signals}</div><div class="stat-sub">this week</div></div>
++        <div class="stat-card alert-card"><div class="stat-label">Unread alerts</div><div class="stat-num">${stats.unread}</div><div class="stat-sub">need review</div></div>
++        <div class="stat-card"><div class="stat-label">Peak risk</div><div class="stat-num" style="color:${stats.maxRisk>=80?'#C85A2E':stats.maxRisk>=60?'#D97706':'#2C5A3F'}">${stats.maxRisk}</div><div class="stat-sub">max score</div></div>
++      </div>
++
++      <div class="two-col" style="margin-bottom:24px;flex:0 0 auto">
++        <div class="card">
++          <div class="card-header"><span class="card-title">Devices</span>
++            <button class="card-action add-device-link" data-child-id="${child.id}" data-child-name="${child.name}">+ Add device</button>
++          </div>
++          <div style="padding:0 24px 24px">
++            ${devices.length === 0
++              ? '<p class="no-devices-hint">No devices connected yet.</p>'
++              : devices.map(d => {
++                  const s = deviceStatus(d.last_seen)
++                  return `<div class="device-item" style="margin-bottom:8px">
++                    <span class="device-item-icon">${platformIcon(d.platform)}</span>
++                    <span class="device-item-name">${d.name}</span>
++                    <span class="device-status"><span class="status-dot-sm ${s.cls}"></span>${s.label}</span>
++                    <button class="device-token-btn" data-token="${d.device_token}">Copy token</button>
++                  </div>`
++                }).join('')
++            }
++          </div>
++        </div>
++
++        <div class="card">
++          <div class="card-header"><span class="card-title">Activity this week</span></div>
++          <div class="chart-wrap" style="height:260px"><canvas id="chart-child-activity"></canvas></div>
++        </div>
++      </div>
++
++      <div class="card" style="flex:1;min-height:0">
++        <div class="card-header" style="flex-shrink:0"><span class="card-title">Recent alerts</span></div>
++        <div class="alert-feed" id="child-alert-feed">
++          ${alerts.length === 0
++            ? '<div class="empty-state">No alerts yet.</div>'
++            : alerts.map(a => `
++              <div class="alert-row ${a.read?'read':''}" data-id="${a.id}">
++                <span class="alert-pill pill-${a.level}">${a.level}</span>
++                <div class="alert-body">
++                  <div class="alert-title-text">${a.title}</div>
++                  <div class="alert-meta">${a.category} ┬╖ ${timeAgo(a.created_at)}</div>
++                </div>
++              </div>
++            `).join('')
++          }
++        </div>
++      </div>
++    `
++
++    // Load child-specific chart
++    try {
++      const actData = await api(`/activity?days=7&child_id=${childId}`)
++      mkChart('chart-child-activity', {
++        type: 'bar',
++        data: {
++          labels: actData.byDay.map(d => new Date(d.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'})),
++          datasets: [
++            { label: 'Critical', data: actData.byDay.map(d=>d.critical), backgroundColor:'#C85A2E', borderRadius:4, stack:'s' },
++            { label: 'Warn',     data: actData.byDay.map(d=>d.warn),     backgroundColor:'#D97706', borderRadius:4, stack:'s' },
++            { label: 'Info',     data: actData.byDay.map(d=>d.info),     backgroundColor:'#2C5A3F', borderRadius:4, stack:'s' },
++          ]
++        },
++        options: {
++          responsive:true, maintainAspectRatio:false,
++          plugins:{ legend:{display:false} },
++          scales:{
++            x:{grid:{display:false},border:{display:false}},
++            y:{grid:{color:'rgba(26,42,34,0.06)'},border:{display:false},ticks:{precision:0}}
++          }
++        }
++      })
++    } catch {}
++
++    // Wire device token copy + add device buttons
++    container.querySelectorAll('.device-token-btn').forEach(btn => {
++      btn.addEventListener('click', () => {
++        navigator.clipboard.writeText(btn.dataset.token).then(() => {
++          btn.textContent = 'Copied!'
++          setTimeout(() => { btn.textContent = 'Copy token' }, 2000)
++        })
++      })
++    })
++    container.querySelectorAll('.add-device-link').forEach(btn => {
++      btn.addEventListener('click', () => openAddDeviceModal(btn.dataset.childId, btn.dataset.childName))
++    })
++
++    // Mark alert read on click
++    container.querySelectorAll('.alert-row:not(.read)').forEach(row => {
++      row.addEventListener('click', async () => {
++        await api(`/alerts/${row.dataset.id}/read`, { method: 'PATCH' })
++        row.classList.add('read')
++      })
++    })
++  } catch (err) {
++    container.innerHTML = '<div class="empty-state">Could not load child data.</div>'
++    console.error(err)
++  }
++}
++
+ // ΓöÇΓöÇΓöÇ Add device modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ function openAddDeviceModal(childId, childName) {
+   $('#device-child-id').value = childId
+diff --git a/node_modules/.vite/deps/_metadata.json b/node_modules/.vite/deps/_metadata.json
+index 03468ad..b66483d 100644
+--- a/node_modules/.vite/deps/_metadata.json
++++ b/node_modules/.vite/deps/_metadata.json
+@@ -1,25 +1,31 @@
+ {
+-  "hash": "8ee61e09",
++  "hash": "b51294b4",
+   "configHash": "7910c27d",
+-  "lockfileHash": "43c268fe",
+-  "browserHash": "71f587b0",
++  "lockfileHash": "11140c66",
++  "browserHash": "465139f5",
+   "optimized": {
+     "@studio-freight/lenis": {
+       "src": "../../@studio-freight/lenis/dist/lenis.mjs",
+       "file": "@studio-freight_lenis.js",
+-      "fileHash": "318fb496",
++      "fileHash": "7dde7859",
++      "needsInterop": false
++    },
++    "chart.js/auto": {
++      "src": "../../chart.js/auto/auto.js",
++      "file": "chart__js_auto.js",
++      "fileHash": "e42e5961",
+       "needsInterop": false
+     },
+     "gsap": {
+       "src": "../../gsap/index.js",
+       "file": "gsap.js",
+-      "fileHash": "e9fdf651",
++      "fileHash": "481352ec",
+       "needsInterop": false
+     },
+     "gsap/ScrollTrigger": {
+       "src": "../../gsap/ScrollTrigger.js",
+       "file": "gsap_ScrollTrigger.js",
+-      "fileHash": "818a8f97",
++      "fileHash": "e49580e1",
+       "needsInterop": false
+     }
+   },
+diff --git a/src/routes/dashboard.js b/src/routes/dashboard.js
+index c4255f4..e4016c3 100644
+--- a/src/routes/dashboard.js
++++ b/src/routes/dashboard.js
+@@ -34,20 +34,29 @@ router.post('/family/child', requireAuth, requireFamily, (req, res) => {
+ 
+ /* ΓöÇΓöÇ GET /api/alerts ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+ router.get('/alerts', requireAuth, requireFamily, (req, res) => {
+-  const limit  = Math.min(parseInt(req.query.limit)  || 20, 100)
+-  const offset = parseInt(req.query.offset) || 0
++  const limit    = Math.min(parseInt(req.query.limit)  || 20, 100)
++  const offset   = parseInt(req.query.offset) || 0
++  const days     = Math.min(parseInt(req.query.days) || 30, 30)
++  const childId  = req.query.child_id ? parseInt(req.query.child_id) : null
++  const level    = req.query.level    || null
+   const unreadOnly = req.query.unread === 'true'
+ 
+-  const where = unreadOnly ? 'WHERE a.family_id = ? AND a.read = 0' : 'WHERE a.family_id = ?'
++  const conditions = ['a.family_id = ?']
++  const args       = [req.family.id]
++
++  if (unreadOnly)  { conditions.push('a.read = 0') }
++  if (childId)     { conditions.push('a.child_id = ?'); args.push(childId) }
++  if (level)       { conditions.push('a.level = ?');    args.push(level) }
++  conditions.push(`a.created_at > datetime('now', '-${days} days')`)
++
++  const where = 'WHERE ' + conditions.join(' AND ')
+ 
+   const alerts = db.prepare(`
+     SELECT a.*, c.name AS child_name
+-    FROM alerts a
+-    JOIN children c ON c.id = a.child_id
++    FROM alerts a JOIN children c ON c.id = a.child_id
+     ${where}
+-    ORDER BY a.created_at DESC
+-    LIMIT ? OFFSET ?
+-  `).all(req.family.id, limit, offset)
++    ORDER BY a.created_at DESC LIMIT ? OFFSET ?
++  `).all(...args, limit, offset)
+ 
+   const { count } = db
+     .prepare('SELECT COUNT(*) as count FROM alerts WHERE family_id = ? AND read = 0')
+diff --git a/src/simulator.js b/src/simulator.js
+index 1ad2000..5ea043d 100644
+--- a/src/simulator.js
++++ b/src/simulator.js
+@@ -130,47 +130,73 @@ const RISK_SCORE = {
+ 
+ const ALERT_LEVEL = s => s >= 80 ? 'critical' : s >= 60 ? 'warn' : s >= 20 ? 'info' : 'ok'
+ 
+-function fireSignal(device, scenario) {
+-  const risk   = RISK_SCORE[scenario.type] ?? 20
+-  const level  = ALERT_LEVEL(risk)
++function fireSignal(device, scenario, at = null) {
++  const risk    = RISK_SCORE[scenario.type] ?? 20
++  const level   = ALERT_LEVEL(risk)
+   const payload = JSON.stringify(scenario.payload)
++  const ts      = at || new Date().toISOString().replace('T', ' ').slice(0, 19)
+ 
+   const { lastInsertRowid: sigId } = db
+-    .prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed) VALUES (?, ?, ?, ?, 1)')
+-    .run(device.id, scenario.type, payload, risk)
++    .prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed, created_at) VALUES (?, ?, ?, ?, 1, ?)')
++    .run(device.id, scenario.type, payload, risk, ts)
+ 
+   const child = db.prepare('SELECT * FROM children WHERE id = ?').get(device.child_id)
+ 
+   if (risk >= 20) {
+     db.prepare(`
+-      INSERT INTO alerts (family_id, child_id, signal_id, level, category, title, body)
+-      VALUES (?, ?, ?, ?, ?, ?, ?)
++      INSERT INTO alerts (family_id, child_id, signal_id, level, category, title, body, created_at)
++      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     `).run(
+       child.family_id, child.id, sigId, level,
+       scenario.type.split('.')[0],
+       scenario.title.replace('Emma', child.name).replace('Liam', child.name),
+       scenario.body.replace('Emma', child.name).replace('Liam', child.name),
++      ts,
+     )
+   }
+ 
+   db.prepare('UPDATE devices SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(device.id)
+ }
+ 
++// How many signals per day for each of the past 7 days (index 0 = 7 days ago)
++const DAILY_COUNTS = [3, 5, 2, 6, 4, 7, 3]
++
++function seedHistoricalWeek(devices) {
++  const existing = db.prepare('SELECT COUNT(*) as c FROM signals WHERE device_id IN (' +
++    devices.map(() => '?').join(',') + ')').get(...devices.map(d => d.id)).c
++  if (existing > 10) return // already seeded
++
++  let total = 0
++  for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
++    const count = DAILY_COUNTS[6 - daysAgo]
++    for (let i = 0; i < count; i++) {
++      const scenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)]
++      const device   = devices[Math.floor(Math.random() * devices.length)]
++
++      // Spread signals across random hours of the day
++      const hour   = 8 + Math.floor(Math.random() * 14) // 8amΓÇô10pm
++      const minute = Math.floor(Math.random() * 60)
++      const d      = new Date()
++      d.setDate(d.getDate() - daysAgo)
++      d.setHours(hour, minute, 0, 0)
++      const ts = d.toISOString().replace('T', ' ').slice(0, 19)
++
++      fireSignal(device, scenario, ts)
++      total++
++    }
++  }
++  console.log(`[simulator] Seeded ${total} historical signals across 7 days`)
++}
++
+ export function startSimulator() {
+   if (process.env.NODE_ENV === 'production') return
+ 
+   const { devices } = ensureDemoFamily()
+   if (!devices.length) return
+ 
+-  // Seed 5 historical signals immediately so dashboard isn't empty on first load
+-  const historical = [...SCENARIOS].sort(() => Math.random() - 0.5).slice(0, 5)
+-  historical.forEach((s, i) => {
+-    const device = devices[i % devices.length]
+-    fireSignal(device, s)
+-  })
+-  console.log('[simulator] Seeded 5 historical signals')
++  seedHistoricalWeek(devices)
+ 
+-  // Then fire a new signal every 45 seconds to keep the feed live
++  // Fire a new signal every 45 seconds to keep the feed live
+   setInterval(() => {
+     const scenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)]
+     const device   = devices[Math.floor(Math.random() * devices.length)]

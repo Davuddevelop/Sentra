@@ -119,3 +119,85 @@ export async function sendWelcomeEmail({ name, email }) {
     console.error('[email] welcome send failed:', err.message)
   }
 }
+
+function weeklyDigestEmail({ parentName, parentEmail, children, weekStart, weekEnd }) {
+  const totalSignals  = children.reduce((s, c) => s + c.signals, 0)
+  const totalCritical = children.reduce((s, c) => s + c.critical, 0)
+  const statusColor   = totalCritical > 0 ? '#C85A2E' : '#2C5A3F'
+  const statusLabel   = totalCritical > 0 ? `${totalCritical} critical alerts need your attention` : 'All clear — no critical alerts this week'
+
+  const childRows = children.map(c => `
+    <tr>
+      <td style="padding:14px 0;border-bottom:0.5px solid rgba(26,42,34,0.1);font-size:14px;font-weight:500;color:#1A2A22">${c.name}</td>
+      <td style="padding:14px 0;border-bottom:0.5px solid rgba(26,42,34,0.1);font-size:14px;color:#3C4A42;text-align:center">${c.signals}</td>
+      <td style="padding:14px 0;border-bottom:0.5px solid rgba(26,42,34,0.1);font-size:14px;color:${c.critical > 0 ? '#C85A2E' : '#3C4A42'};text-align:center;font-weight:${c.critical > 0 ? '600' : '400'}">${c.critical}</td>
+      <td style="padding:14px 0;border-bottom:0.5px solid rgba(26,42,34,0.1);font-size:14px;color:${c.warn > 0 ? '#D97706' : '#3C4A42'};text-align:center">${c.warn}</td>
+    </tr>
+  `).join('')
+
+  return {
+    from: FROM,
+    to: parentEmail,
+    subject: `Sentra weekly report — ${weekStart} to ${weekEnd}`,
+    html: `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#F3EDDD;font-family:Inter,-apple-system,sans-serif">
+  <div style="max-width:560px;margin:40px auto;padding:0 20px">
+    <div style="margin-bottom:32px;font-family:Georgia,serif;font-size:22px;color:#1A2A22;font-weight:500">◆ Sentra</div>
+
+    <div style="background:#FBF7EB;border-radius:20px;padding:36px;border:0.5px solid rgba(26,42,34,0.14)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#3C4A42;margin-bottom:12px">Weekly report</div>
+      <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;color:#1A2A22;margin:0 0 8px;letter-spacing:-0.5px">
+        ${weekStart} – ${weekEnd}
+      </h1>
+      <p style="font-size:15px;color:${statusColor};font-weight:500;margin:0 0 28px">${statusLabel}</p>
+
+      <!-- Summary row -->
+      <div style="display:flex;gap:16px;margin-bottom:28px">
+        <div style="flex:1;background:#F3EDDD;border-radius:14px;padding:18px;text-align:center">
+          <div style="font-size:32px;font-family:Georgia,serif;font-weight:400;color:#1A2A22;margin-bottom:4px">${totalSignals}</div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#3C4A42">Signals</div>
+        </div>
+        <div style="flex:1;background:#F3EDDD;border-radius:14px;padding:18px;text-align:center">
+          <div style="font-size:32px;font-family:Georgia,serif;font-weight:400;color:${totalCritical > 0 ? '#C85A2E' : '#1A2A22'};margin-bottom:4px">${totalCritical}</div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#3C4A42">Critical</div>
+        </div>
+      </div>
+
+      <!-- Per-child table -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:28px">
+        <thead>
+          <tr>
+            <th style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#3C4A42;font-weight:500;padding-bottom:12px;text-align:left">Child</th>
+            <th style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#3C4A42;font-weight:500;padding-bottom:12px;text-align:center">Signals</th>
+            <th style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#3C4A42;font-weight:500;padding-bottom:12px;text-align:center">Critical</th>
+            <th style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#3C4A42;font-weight:500;padding-bottom:12px;text-align:center">Warnings</th>
+          </tr>
+        </thead>
+        <tbody>${childRows}</tbody>
+      </table>
+
+      <a href="${process.env.APP_URL || 'http://localhost:5173'}/dashboard.html"
+         style="display:inline-block;background:#1A2A22;color:#F8F4E8;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:14px;font-weight:500">
+        View full report →
+      </a>
+    </div>
+
+    <p style="font-size:12px;color:#3C4A42;margin-top:24px;text-align:center;line-height:1.6">
+      Sentra monitors behavior patterns, never message content.<br>
+      <a href="${process.env.APP_URL || 'http://localhost:5173'}/privacy" style="color:#2C5A3F">Privacy policy</a> · <a href="#" style="color:#2C5A3F">Unsubscribe</a>
+    </p>
+  </div>
+</body>
+</html>`,
+  }
+}
+
+export async function sendWeeklyDigest({ parentName, parentEmail, children, weekStart, weekEnd }) {
+  try {
+    await getTransporter().sendMail(weeklyDigestEmail({ parentName, parentEmail, children, weekStart, weekEnd }))
+  } catch (err) {
+    console.error('[email] weekly digest failed:', err.message)
+  }
+}

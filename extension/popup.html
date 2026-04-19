@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sentra Monitor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 280px;
+      font-family: Inter, -apple-system, sans-serif;
+      background: #F3EDDD;
+      color: #1A2A22;
+    }
+
+    .header {
+      background: #1A2A22;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      font-family: Georgia, serif;
+      font-size: 16px;
+      color: #F8F4E8;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2C5A3F;
+      margin-left: auto;
+      box-shadow: 0 0 0 0 rgba(44,90,63,0.4);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.inactive { background: #C85A2E; animation: none; }
+
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(44,90,63,0.4); }
+      70%  { box-shadow: 0 0 0 6px rgba(44,90,63,0); }
+      100% { box-shadow: 0 0 0 0 rgba(44,90,63,0); }
+    }
+
+    .body { padding: 16px 20px; }
+
+    .status-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #3C4A42;
+      margin-bottom: 6px;
+    }
+
+    .status-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1A2A22;
+      margin-bottom: 16px;
+    }
+
+    .device-row {
+      background: #FBF7EB;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      border: 0.5px solid rgba(26,42,34,0.14);
+    }
+
+    .device-label {
+      font-size: 11px;
+      color: #3C4A42;
+      margin-bottom: 3px;
+    }
+
+    .device-token {
+      font-size: 12px;
+      font-weight: 500;
+      color: #1A2A22;
+      word-break: break-all;
+      font-family: monospace;
+    }
+
+    .no-token {
+      font-size: 13px;
+      color: #C85A2E;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      border-radius: 100px;
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+
+    .btn-primary { background: #1A2A22; color: #F8F4E8; }
+    .btn-secondary { background: transparent; color: #1A2A22; border: 0.5px solid rgba(26,42,34,0.3); }
+
+    .footer {
+      padding: 12px 20px;
+      border-top: 0.5px solid rgba(26,42,34,0.1);
+      font-size: 11px;
+      color: #3C4A42;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="logo">◆ Sentra</span>
+    <div class="status-dot" id="statusDot"></div>
+  </div>
+
+  <div class="body">
+    <div class="status-label">Monitoring status</div>
+    <div class="status-text" id="statusText">Checking...</div>
+
+    <div id="tokenSection"></div>
+
+    <a href="options.html" target="_blank" class="btn btn-primary">Open Settings</a>
+    <a href="http://localhost:8000/dashboard.html" target="_blank" class="btn btn-secondary">View Dashboard</a>
+  </div>
+
+  <div class="footer">Monitoring behavior patterns — never message content.</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

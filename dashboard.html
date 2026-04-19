@@ -92,6 +92,7 @@
     margin-bottom: 2px;
   }
   .nav-child-item:hover { background: var(--cream-deep); color: var(--ink); }
+  .nav-child-item.active-child { background: var(--moss-light); color: var(--ink); }
   .child-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--moss); flex-shrink: 0; }
 
   .sidebar-footer {
@@ -109,16 +110,16 @@
   .logout-btn:hover { background: var(--cream-deep); color: var(--terra); }
 
   /* ── Main content ─────────────────────────────────────────── */
-  .main { display: flex; flex-direction: column; min-height: 100vh; }
+  .main { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
   .topbar {
-    background: rgba(243, 237, 221, 0.85);
+    background: rgba(243, 237, 221, 0.92);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 0.5px solid var(--line-soft);
-    padding: 16px 32px;
+    padding: 18px 36px;
     display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 50;
+    flex-shrink: 0; z-index: 50;
   }
   .topbar-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; letter-spacing: -0.3px; }
   .topbar-right { display: flex; align-items: center; gap: 16px; }
@@ -131,90 +132,136 @@
     display: none;
   }
 
-  .content { padding: 32px; flex: 1; max-width: 1100px; }
+  .content {
+    padding: 32px 36px 36px;
+    flex: 1;
+    width: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
 
   /* ── Stat cards ───────────────────────────────────────────── */
-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px; flex-shrink: 0; }
   @media (max-width: 700px) { .stats-row { grid-template-columns: 1fr 1fr; } }
   .stat-card {
     background: var(--paper);
-    border-radius: 20px;
-    padding: 20px 22px;
+    border-radius: 24px;
+    padding: 28px 28px 24px;
     border: 0.5px solid var(--line-soft);
   }
-  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); margin-bottom: 10px; }
-  .stat-num { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 400; line-height: 1; letter-spacing: -1px; }
-  .stat-sub { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink-soft); margin-bottom: 14px; }
+  .stat-num { font-family: 'Fraunces', serif; font-size: 52px; font-weight: 400; line-height: 1; letter-spacing: -2px; }
+  .stat-sub { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
   .stat-card.alert-card .stat-num { color: var(--terra); }
 
   /* ── Two-col grid ─────────────────────────────────────────── */
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1; min-height: 0; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
 
   /* ── Card ─────────────────────────────────────────────────── */
   .card {
     background: var(--paper);
-    border-radius: 20px;
+    border-radius: 24px;
     border: 0.5px solid var(--line-soft);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   .card-header {
-    padding: 20px 24px 0;
+    padding: 24px 28px 0;
     display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
   }
-  .card-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; letter-spacing: -0.2px; }
-  .card-action { font-size: 12px; color: var(--moss); cursor: pointer; font-weight: 500; background: none; border: none; font-family: inherit; }
+  .card-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; letter-spacing: -0.3px; }
+  .card-action { font-size: 13px; color: var(--moss); cursor: pointer; font-weight: 500; background: none; border: none; font-family: inherit; }
   .card-action:hover { text-decoration: underline; }
 
   /* ── Alert feed ───────────────────────────────────────────── */
-  .alert-feed { padding: 0 24px 24px; }
+  .alert-feed { padding: 0 28px 28px; flex: 1; overflow-y: auto; }
   .alert-row {
-    display: flex; gap: 14px; align-items: flex-start;
-    padding: 14px 0;
+    display: flex; gap: 16px; align-items: flex-start;
+    padding: 16px 0;
     border-top: 0.5px solid var(--line-soft);
     cursor: pointer; transition: opacity 0.15s;
   }
   .alert-row:first-child { border-top: none; }
   .alert-row:hover { opacity: 0.8; }
-  .alert-row.read { opacity: 0.5; }
+  .alert-row.read { opacity: 0.45; }
   .alert-pill {
-    font-size: 10px; padding: 3px 9px; border-radius: 100px;
-    text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; flex-shrink: 0; margin-top: 2px;
+    font-size: 11px; padding: 4px 12px; border-radius: 100px;
+    text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; flex-shrink: 0; margin-top: 2px;
   }
   .pill-critical { background: #F5DBCC; color: #8C3B18; }
-  .pill-warn     { background: #F5DBCC; color: #8C3B18; }
+  .pill-warn     { background: #FEF3C7; color: #92400E; }
   .pill-info     { background: #D6E2EE; color: #1F4261; }
   .pill-ok       { background: var(--moss-light); color: var(--moss-deep); }
   .alert-body { flex: 1; }
-  .alert-title-text { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
-  .alert-meta { font-size: 11px; color: var(--ink-soft); }
-  .empty-state { padding: 32px 24px; text-align: center; color: var(--ink-soft); font-size: 14px; }
+  .alert-title-text { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .alert-meta { font-size: 12px; color: var(--ink-soft); }
+  .empty-state { padding: 48px 28px; text-align: center; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
 
   /* ── Children list ────────────────────────────────────────── */
-  .children-list { padding: 0 24px 24px; }
+  .children-list { padding: 0 28px 28px; flex: 1; overflow-y: auto; }
   .child-row {
-    display: flex; align-items: center; gap: 14px;
-    padding: 14px 0; border-top: 0.5px solid var(--line-soft);
+    padding: 18px 0; border-top: 0.5px solid var(--line-soft);
   }
   .child-row:first-child { border-top: none; }
+  .child-row-header {
+    display: flex; align-items: center; gap: 14px;
+  }
   .child-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
+    width: 46px; height: 46px; border-radius: 50%;
     background: var(--moss-light); color: var(--moss-deep);
     display: flex; align-items: center; justify-content: center;
-    font-size: 15px; font-weight: 600; flex-shrink: 0;
+    font-size: 17px; font-weight: 600; flex-shrink: 0;
     font-family: 'Fraunces', serif;
   }
   .child-info { flex: 1; }
-  .child-name { font-size: 14px; font-weight: 500; }
-  .child-devices { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
-  .child-score {
-    font-family: 'Fraunces', serif;
-    font-size: 22px; font-weight: 400; color: var(--moss);
+  .child-name { font-size: 15px; font-weight: 500; }
+  .child-devices-label { font-size: 13px; color: var(--ink-soft); margin-top: 3px; }
+  .add-device-link {
+    font-size: 12px; color: var(--moss); font-weight: 500;
+    background: none; border: none; cursor: pointer; font-family: inherit;
+    padding: 0; text-decoration: none;
   }
+  .add-device-link:hover { text-decoration: underline; }
+
+  /* ── Device items ─────────────────────────────────────────── */
+  .devices-section { margin-top: 12px; padding-left: 60px; display: flex; flex-direction: column; gap: 8px; }
+  .device-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--cream-deep); border-radius: 12px;
+    padding: 12px 16px;
+  }
+  .device-item-icon { flex-shrink: 0; color: var(--ink-soft); }
+  .device-item-name { font-size: 13px; font-weight: 500; flex: 1; }
+  .device-item-platform { font-size: 12px; color: var(--ink-soft); }
+  .device-token-btn {
+    font-size: 12px; padding: 5px 14px; border-radius: 100px;
+    border: 0.5px solid var(--line); background: var(--paper);
+    color: var(--ink-soft); cursor: pointer; font-family: inherit;
+    font-weight: 500; white-space: nowrap; flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+  }
+  .device-token-btn:hover { background: var(--ink); color: var(--cream-soft); border-color: var(--ink); }
+  .no-devices-hint { font-size: 13px; color: var(--ink-soft); font-style: italic; }
+
+  /* ── Device status dot ────────────────────────────────────── */
+  .device-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--ink-soft); flex-shrink: 0;
+  }
+  .status-dot-sm {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .status-dot-sm.online  { background: #2C5A3F; box-shadow: 0 0 0 2px rgba(44,90,63,0.2); }
+  .status-dot-sm.recent  { background: #D97706; box-shadow: 0 0 0 2px rgba(217,119,6,0.2); }
+  .status-dot-sm.offline { background: #9CA3AF; }
+
   .add-child-btn {
-    width: 100%; padding: 12px; text-align: center;
-    font-size: 13px; color: var(--moss); font-weight: 500;
+    width: 100%; padding: 16px; text-align: center;
+    font-size: 14px; color: var(--moss); font-weight: 500;
     background: none; border: none; cursor: pointer; font-family: inherit;
     border-top: 0.5px solid var(--line-soft);
     transition: background 0.15s;
@@ -306,6 +353,211 @@
   .toast-success { background: var(--moss); color: var(--cream-soft); }
   .toast-error   { background: var(--terra); color: var(--cream-soft); }
 
+  /* ── Views ────────────────────────────────────────────────── */
+  .view { animation: fadeIn 0.2s ease; flex: 1; display: flex; flex-direction: column; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .view-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 32px; flex-wrap: wrap; gap: 16px; flex-shrink: 0;
+  }
+  .view-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--ink-soft); margin-bottom: 6px; }
+  .view-title { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 400; letter-spacing: -1px; }
+
+  /* ── Filters ───────────────────────────────────────────────── */
+  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .filter-select {
+    padding: 10px 18px; border-radius: 100px; border: 0.5px solid var(--line);
+    background: var(--paper); font-size: 13px; font-family: inherit;
+    color: var(--ink); cursor: pointer; outline: none;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233C4A42' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    padding-right: 36px;
+  }
+  .filter-select:focus { border-color: var(--moss); }
+
+  /* ── Charts ────────────────────────────────────────────────── */
+  .chart-row { display: grid; grid-template-columns: 1fr 400px; gap: 24px; width: 100%; }
+  @media (max-width: 1100px) { .chart-row { grid-template-columns: 1fr; } }
+  .chart-card { min-height: 0; }
+  .chart-wrap { padding: 4px 28px 28px; height: 320px; position: relative; }
+
+  /* ── Activity table ────────────────────────────────────────── */
+  #act-table { flex: 1; overflow-y: auto; }
+  .act-table { width: 100%; border-collapse: collapse; }
+  .act-table thead { position: sticky; top: 0; z-index: 1; }
+  .act-table th {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--ink-soft); font-weight: 500; padding: 14px 28px;
+    text-align: left; border-bottom: 0.5px solid var(--line-soft);
+    background: var(--cream-soft);
+  }
+  .act-table td {
+    padding: 16px 28px; font-size: 14px;
+    border-bottom: 0.5px solid var(--line-soft);
+    vertical-align: middle;
+  }
+  .act-table tr:last-child td { border-bottom: none; }
+  .act-table tr { cursor: pointer; transition: background 0.1s; }
+  .act-table tr:hover td { background: var(--cream-soft); }
+  .act-table tr.read td { opacity: 0.45; }
+  .load-more-btn {
+    width: 100%; padding: 18px; text-align: center;
+    font-size: 14px; color: var(--moss); font-weight: 500;
+    background: none; border: none; cursor: pointer; font-family: inherit;
+    border-top: 0.5px solid var(--line-soft); transition: background 0.15s;
+  }
+  .load-more-btn:hover { background: var(--cream-deep); }
+
+  /* ── Weekly report ─────────────────────────────────────────── */
+  .child-breakdown-row {
+    display: flex; align-items: center; gap: 20px;
+    padding: 20px 0; border-top: 0.5px solid var(--line-soft);
+  }
+  .child-breakdown-row:first-child { border-top: none; }
+  .risk-bar-wrap { flex: 1; }
+  .risk-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-soft); margin-bottom: 8px; }
+  .risk-bar-track { height: 8px; background: var(--cream-deep); border-radius: 100px; overflow: hidden; }
+  .risk-bar-fill { height: 100%; border-radius: 100px; transition: width 0.6s ease; }
+
+  /* ── Child detail ──────────────────────────────────────────── */
+  .child-detail-header {
+    display: flex; align-items: center; gap: 22px; margin-bottom: 32px;
+  }
+  .child-detail-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--moss-light); color: var(--moss-deep);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 600; font-family: 'Fraunces', serif; flex-shrink: 0;
+  }
+  .child-detail-name { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 400; letter-spacing: -1px; }
+  .child-detail-age  { font-size: 14px; color: var(--ink-soft); margin-top: 4px; }
+
+  /* ── Onboarding wizard ────────────────────────────────────── */
+  .onboarding-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(26,42,34,0.55); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .onboarding-box {
+    background: var(--paper); border-radius: 28px; padding: 48px 44px;
+    width: 100%; max-width: 520px;
+    box-shadow: 0 40px 80px -20px rgba(26,42,34,0.3);
+  }
+  .onboarding-steps {
+    display: flex; gap: 8px; margin-bottom: 36px;
+  }
+  .onboarding-step-dot {
+    height: 4px; border-radius: 100px; flex: 1;
+    background: var(--cream-deep); transition: background 0.3s;
+  }
+  .onboarding-step-dot.active  { background: var(--moss); }
+  .onboarding-step-dot.done    { background: var(--moss-light); }
+  .onboarding-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--moss); margin-bottom: 10px; }
+  .onboarding-title { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 400; letter-spacing: -0.5px; margin-bottom: 10px; }
+  .onboarding-title em { font-style: italic; font-weight: 300; }
+  .onboarding-body { font-size: 15px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 28px; }
+  .onboarding-platforms {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px;
+  }
+  .platform-pill {
+    font-size: 12px; padding: 6px 14px; border-radius: 100px;
+    background: var(--moss-light); color: var(--moss-deep); font-weight: 500;
+  }
+  .onboarding-btn {
+    width: 100%; padding: 16px; background: var(--ink); color: var(--cream-soft);
+    border: none; border-radius: 100px; font-size: 15px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background 0.2s;
+  }
+  .onboarding-btn:hover:not(:disabled) { background: var(--moss-deep); }
+  .onboarding-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .onboarding-skip { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 14px; cursor: pointer; }
+  .onboarding-skip:hover { color: var(--ink); text-decoration: underline; }
+  .extension-link-box {
+    background: var(--cream-deep); border-radius: 16px; padding: 20px 24px;
+    margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .extension-link-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink-soft); }
+  .extension-link-url {
+    font-size: 13px; color: var(--moss); font-weight: 500; word-break: break-all;
+  }
+  .copilot-install-steps { display: flex; flex-direction: column; gap: 10px; }
+  .install-step {
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .install-step-num {
+    width: 24px; height: 24px; border-radius: 50%; background: var(--moss);
+    color: var(--cream-soft); font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .install-step-text { font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
+  .token-reveal-box {
+    background: var(--cream-deep); border-radius: 16px; padding: 20px 24px;
+    margin-bottom: 24px; display: flex; align-items: center; gap: 14px;
+  }
+  .token-reveal-value {
+    font-family: monospace; font-size: 13px; font-weight: 600;
+    color: var(--ink); flex: 1; word-break: break-all;
+  }
+
+  /* ── COPPA notice ──────────────────────────────────────────── */
+  .coppa-notice {
+    background: #FEF3C7; border: 1px solid #FDE68A;
+    border-radius: 14px; padding: 14px 18px;
+    font-size: 13px; color: #92400E; line-height: 1.5;
+    margin-top: 8px;
+  }
+  .consent-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    margin-top: 4px;
+  }
+  .consent-row input[type="checkbox"] {
+    margin-top: 3px; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--moss);
+  }
+  .consent-row label { font-size: 13px; color: var(--ink-soft); line-height: 1.5; cursor: pointer; }
+  .consent-row a { color: var(--moss); }
+
+  /* ── Getting started empty state ──────────────────────────── */
+  .getting-started {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 48px 24px;
+    background: var(--paper); border-radius: 24px;
+    border: 0.5px solid var(--line-soft);
+  }
+  .getting-started-icon {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--moss-light); color: var(--moss-deep);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+  }
+  .getting-started h3 {
+    font-family: 'Fraunces', serif; font-size: 26px; font-weight: 400;
+    letter-spacing: -0.5px; margin-bottom: 10px;
+  }
+  .getting-started p {
+    font-size: 15px; color: var(--ink-soft); line-height: 1.6;
+    max-width: 380px; margin: 0 auto 28px;
+  }
+  .getting-started-steps {
+    display: flex; gap: 32px; margin-bottom: 36px; flex-wrap: wrap; justify-content: center;
+  }
+  .gs-step { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 140px; }
+  .gs-step-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--moss); color: var(--cream-soft);
+    font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gs-step-label { font-size: 13px; color: var(--ink-soft); line-height: 1.4; text-align: center; }
+  .gs-btn {
+    padding: 16px 36px; background: var(--ink); color: var(--cream-soft);
+    border: none; border-radius: 100px; font-size: 15px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background 0.2s;
+  }
+  .gs-btn:hover { background: var(--moss-deep); }
+
   /* ── Skeleton loading ─────────────────────────────────────── */
   @keyframes shimmer {
     0%   { background-position: -400px 0; }
@@ -352,6 +604,10 @@
         <input type="text" name="name" class="auth-input" placeholder="Your name" required autocomplete="name">
         <input type="email" name="email" class="auth-input" placeholder="Email address" required autocomplete="email">
         <input type="password" name="password" class="auth-input" placeholder="Password (min 8 chars)" required autocomplete="new-password">
+        <div class="consent-row">
+          <input type="checkbox" id="coppa-consent" name="coppa_consent" required>
+          <label for="coppa-consent">I am the parent or guardian of the children I will monitor. I consent to Sentra collecting behavioral metadata on their AI chatbot usage. <a href="/privacy" target="_blank">Privacy policy</a></label>
+        </div>
         <button type="submit" class="auth-submit">Create account</button>
         <p class="auth-switch">Already have an account? <a id="go-login">Sign in →</a></p>
       </form>
@@ -379,18 +635,18 @@
       </div>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-item active">
+      <div class="nav-item active" data-view="overview">
         <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
         Overview
       </div>
       <div class="nav-section">Children</div>
       <div id="sidebar-children"></div>
       <div class="nav-section">Reports</div>
-      <div class="nav-item">
+      <div class="nav-item" data-view="activity">
         <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 2 h10 a1 1 0 0 1 1 1 v10 a1 1 0 0 1 -1 1 H3 a1 1 0 0 1 -1 -1 V3 a1 1 0 0 1 1 -1z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 6 h8 M4 9 h6 M4 12 h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         Activity log
       </div>
-      <div class="nav-item">
+      <div class="nav-item" data-view="weekly">
         <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4 v4 l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
         Weekly report
       </div>
@@ -414,56 +670,194 @@
     </div>
 
     <div class="content">
-      <!-- Stats row -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">Children</div>
-          <div class="stat-num" id="stat-children">—</div>
-          <div class="stat-sub">monitored</div>
+
+      <!-- ═══ VIEW: Overview ══════════════════════════════════ -->
+      <div id="view-overview" class="view">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Children</div>
+            <div class="stat-num" id="stat-children">—</div>
+            <div class="stat-sub">monitored</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Devices</div>
+            <div class="stat-num" id="stat-devices">—</div>
+            <div class="stat-sub">connected</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Signals</div>
+            <div class="stat-num" id="stat-signals">—</div>
+            <div class="stat-sub">this week</div>
+          </div>
+          <div class="stat-card alert-card">
+            <div class="stat-label">Alerts</div>
+            <div class="stat-num" id="stat-alerts">—</div>
+            <div class="stat-sub">need review</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Devices</div>
-          <div class="stat-num" id="stat-devices">—</div>
-          <div class="stat-sub">connected</div>
+        <div class="chart-row" style="margin-bottom:24px;flex-shrink:0">
+          <div class="card chart-card">
+            <div class="card-header"><span class="card-title">Signals this week</span></div>
+            <div class="chart-wrap" style="height:240px"><canvas id="chart-overview-daily"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">By category</span></div>
+            <div class="chart-wrap" style="height:240px"><canvas id="chart-overview-cat"></canvas></div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Signals</div>
-          <div class="stat-num" id="stat-signals">—</div>
-          <div class="stat-sub">this week</div>
-        </div>
-        <div class="stat-card alert-card">
-          <div class="stat-label">Alerts</div>
-          <div class="stat-num" id="stat-alerts">—</div>
-          <div class="stat-sub">need review</div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Recent alerts</span>
+              <button class="card-action" id="mark-all-read">Mark all read</button>
+            </div>
+            <div class="alert-feed" id="alert-feed"><div class="empty-state">Loading alerts…</div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Your children</span></div>
+            <div class="children-list" id="children-list"><div class="empty-state">Loading…</div></div>
+            <button class="add-child-btn" id="add-child-btn" style="flex-shrink:0">+ Add a child</button>
+          </div>
         </div>
       </div>
 
-      <!-- Two-col: alerts + children -->
-      <div class="two-col">
-
-        <!-- Alert feed -->
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Recent alerts</span>
-            <button class="card-action" id="mark-all-read">Mark all read</button>
+      <!-- ═══ VIEW: Activity Log ══════════════════════════════ -->
+      <div id="view-activity" class="view" style="display:none">
+        <div class="view-header">
+          <div>
+            <div class="view-eyebrow">Monitoring</div>
+            <h2 class="view-title">Activity Log</h2>
           </div>
-          <div class="alert-feed" id="alert-feed">
-            <div class="empty-state">Loading alerts…</div>
+          <div class="filter-bar">
+            <select id="act-filter-child" class="filter-select">
+              <option value="">All children</option>
+            </select>
+            <select id="act-filter-level" class="filter-select">
+              <option value="">All levels</option>
+              <option value="critical">Critical</option>
+              <option value="warn">Warning</option>
+              <option value="info">Info</option>
+              <option value="ok">OK</option>
+            </select>
+            <select id="act-filter-days" class="filter-select">
+              <option value="7">Last 7 days</option>
+              <option value="14">Last 14 days</option>
+              <option value="30">Last 30 days</option>
+            </select>
           </div>
         </div>
 
-        <!-- Children -->
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Your children</span>
+        <div class="chart-row">
+          <div class="card chart-card">
+            <div class="card-header"><span class="card-title">Signals per day</span></div>
+            <div class="chart-wrap"><canvas id="chart-daily"></canvas></div>
           </div>
-          <div class="children-list" id="children-list">
-            <div class="empty-state">Loading…</div>
+          <div class="card chart-card chart-card-sm">
+            <div class="card-header"><span class="card-title">By category</span></div>
+            <div class="chart-wrap"><canvas id="chart-category"></canvas></div>
           </div>
-          <button class="add-child-btn" id="add-child-btn">+ Add a child</button>
         </div>
 
+        <div class="card" style="margin-top:20px;flex:1;min-height:0">
+          <div class="card-header" style="flex-shrink:0">
+            <span class="card-title">All alerts</span>
+            <span style="font-size:12px;color:var(--ink-soft)" id="act-count"></span>
+          </div>
+          <div id="act-table"></div>
+          <button id="act-load-more" class="load-more-btn" style="display:none;flex-shrink:0">Load more</button>
+        </div>
       </div>
+
+      <!-- ═══ VIEW: Weekly Report ═════════════════════════════ -->
+      <div id="view-weekly" class="view" style="display:none">
+        <div class="view-header">
+          <div>
+            <div class="view-eyebrow">Reports</div>
+            <h2 class="view-title">Weekly Report</h2>
+          </div>
+          <div id="weekly-date-range" style="font-size:13px;color:var(--ink-soft)"></div>
+        </div>
+
+        <div class="stats-row" id="weekly-stats"></div>
+
+        <div class="chart-row" style="margin-top:20px">
+          <div class="card chart-card" style="flex:2">
+            <div class="card-header"><span class="card-title">Risk levels over time</span></div>
+            <div class="chart-wrap"><canvas id="chart-weekly-trend"></canvas></div>
+          </div>
+          <div class="card chart-card chart-card-sm">
+            <div class="card-header"><span class="card-title">Alert distribution</span></div>
+            <div class="chart-wrap"><canvas id="chart-weekly-dist"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px;flex:1;min-height:0">
+          <div class="card-header" style="flex-shrink:0"><span class="card-title">Per-child breakdown</span></div>
+          <div id="weekly-children" style="padding:0 28px 28px;flex:1;overflow-y:auto"></div>
+        </div>
+      </div>
+
+      <!-- ═══ VIEW: Child Detail ══════════════════════════════ -->
+      <div id="view-child" class="view" style="display:none">
+        <div id="child-detail-content" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Add device modal -->
+<div id="add-device-modal" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" id="add-device-modal-close">✕</button>
+    <h2 class="modal-title">Connect a device</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:20px;line-height:1.55">
+      Give this device a name and choose the platform. You'll get a token to paste into the Sentra Chrome extension.
+    </p>
+    <form class="modal-form" id="add-device-form">
+      <input type="hidden" name="child_id" id="device-child-id">
+      <input type="text" name="name" class="modal-input" placeholder="Device name (e.g. Emma's MacBook)" required>
+      <select name="platform" class="modal-input" style="cursor:pointer">
+        <option value="browser">Browser (Chrome extension)</option>
+        <option value="ios">iPhone / iPad</option>
+        <option value="android">Android</option>
+        <option value="windows">Windows PC</option>
+        <option value="mac">Mac</option>
+      </select>
+      <button type="submit" class="modal-submit">Generate device token</button>
+    </form>
+  </div>
+</div>
+
+<!-- Token reveal modal -->
+<div id="token-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:460px">
+    <button class="modal-close" id="token-modal-close">✕</button>
+    <h2 class="modal-title">Device connected</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:20px;line-height:1.55">
+      Copy this token and paste it into the Sentra Chrome extension settings. It won't be shown again.
+    </p>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;margin-bottom:16px">
+      <div>
+        <div style="background:var(--cream-deep);border-radius:14px;padding:16px 18px;margin-bottom:10px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--ink-soft);margin-bottom:8px">Device token</div>
+          <div id="token-display" style="font-family:monospace;font-size:12px;word-break:break-all;color:var(--ink);font-weight:500"></div>
+        </div>
+        <button id="copy-token-btn" class="modal-submit">Copy token</button>
+      </div>
+      <div style="text-align:center">
+        <canvas id="token-qr" style="border-radius:10px;display:block"></canvas>
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:6px">Scan to pair</div>
+      </div>
+    </div>
+    <div style="background:var(--moss-light);border-radius:14px;padding:14px 16px;margin-top:4px">
+      <div style="font-size:11px;font-weight:600;color:var(--moss-deep);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">How to connect</div>
+      <ol style="font-size:12px;color:var(--moss-deep);line-height:1.7;padding-left:18px">
+        <li>Install the Sentra extension on the child's Chromebook or desktop browser</li>
+        <li>Click the extension icon → Scan QR code — or paste the token manually</li>
+        <li>A PIN will be set so the child cannot remove the extension</li>
+      </ol>
     </div>
   </div>
 </div>
@@ -484,6 +878,76 @@
 <!-- Toast -->
 <div id="toast-container"></div>
 
+<!-- Onboarding wizard (shown after first registration) -->
+<div id="onboarding-overlay" class="onboarding-overlay" style="display:none">
+  <div class="onboarding-box">
+    <div class="onboarding-steps">
+      <div class="onboarding-step-dot active" id="ob-dot-0"></div>
+      <div class="onboarding-step-dot" id="ob-dot-1"></div>
+      <div class="onboarding-step-dot" id="ob-dot-2"></div>
+    </div>
+
+    <!-- Step 0: Welcome -->
+    <div id="ob-step-0">
+      <div class="onboarding-eyebrow">Step 1 of 3</div>
+      <h2 class="onboarding-title">Welcome to <em>Sentra.</em></h2>
+      <p class="onboarding-body">You're three steps away from protecting your child on AI chatbots — without ever reading their messages.</p>
+      <div class="onboarding-platforms">
+        <span class="platform-pill">ChatGPT</span>
+        <span class="platform-pill">Character.AI</span>
+        <span class="platform-pill">Claude</span>
+        <span class="platform-pill">Gemini</span>
+        <span class="platform-pill">Replika</span>
+        <span class="platform-pill">Copilot</span>
+      </div>
+      <button class="onboarding-btn" id="ob-next-0">Add your first child →</button>
+      <p class="onboarding-skip" id="ob-skip">Skip setup — I'll do this later</p>
+    </div>
+
+    <!-- Step 1: Add child -->
+    <div id="ob-step-1" style="display:none">
+      <div class="onboarding-eyebrow">Step 2 of 3</div>
+      <h2 class="onboarding-title">Who are you <em>protecting?</em></h2>
+      <p class="onboarding-body">Add your child's name and age. This helps Sentra tailor risk scoring appropriately.</p>
+      <form id="ob-child-form" class="modal-form" style="margin-bottom:16px">
+        <input type="text" name="name" class="modal-input" placeholder="Child's first name" required>
+        <input type="number" name="age" class="modal-input" placeholder="Age" min="1" max="17" required>
+        <div id="ob-age-warning" style="display:none" class="coppa-notice">
+          Children under 13 are protected under COPPA. Sentra only collects behavioral metadata — never message content.
+        </div>
+        <button type="submit" class="onboarding-btn">Add child and continue →</button>
+      </form>
+    </div>
+
+    <!-- Step 2: Install extension -->
+    <div id="ob-step-2" style="display:none">
+      <div class="onboarding-eyebrow">Step 3 of 3</div>
+      <h2 class="onboarding-title">Install on their <em>browser.</em></h2>
+      <p class="onboarding-body">Install the Sentra extension on your child's Chromebook or desktop Chrome. It takes 60 seconds.</p>
+      <div class="copilot-install-steps">
+        <div class="install-step">
+          <div class="install-step-num">1</div>
+          <div class="install-step-text">Open Chrome on your child's device and go to <strong>chrome://extensions</strong></div>
+        </div>
+        <div class="install-step">
+          <div class="install-step-num">2</div>
+          <div class="install-step-text">Enable <strong>Developer mode</strong> (top-right toggle), then click <strong>Load unpacked</strong></div>
+        </div>
+        <div class="install-step">
+          <div class="install-step-num">3</div>
+          <div class="install-step-text">Click the Sentra extension icon and paste your device token to connect</div>
+        </div>
+        <div class="install-step">
+          <div class="install-step-num">4</div>
+          <div class="install-step-text">Set a PIN in extension settings so your child cannot remove it</div>
+        </div>
+      </div>
+      <button class="onboarding-btn" id="ob-finish" style="margin-top:24px">Go to my dashboard →</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script type="module" src="/dashboard.js"></script>
 </body>
 </html>

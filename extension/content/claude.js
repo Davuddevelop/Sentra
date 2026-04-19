@@ -1,5 +1,5 @@
 /**
- * Sentra — ChatGPT content script
+ * Sentra — Claude.ai content script
  * Monitors: message send events, session duration, pattern detection
  * Privacy: only checks first 80 chars for pattern matching, never stores content
  */
@@ -8,11 +8,10 @@
   if (window.__sentraLoaded) return
   window.__sentraLoaded = true
 
-  const APP = 'ChatGPT'
+  const APP = 'Claude'
 
   chrome.runtime.sendMessage({ type: 'SESSION_START', app: APP })
 
-  let messageCount = 0
   let romanticSignalFired = false
 
   const ROMANTIC_KEYWORDS = [
@@ -28,12 +27,11 @@
     { pattern: /self.harm|cut myself|hurt myself/i,                      category: 'self_harm' },
   ]
 
-  function onMessageSend(el) {
-    const text = el?.value || el?.textContent || ''
+  function onMessageSend(textarea) {
+    const text = textarea?.value || textarea?.textContent || ''
     const firstChars = text.slice(0, 80)
     const lower = firstChars.toLowerCase()
 
-    messageCount++
     chrome.runtime.sendMessage({
       type: 'MESSAGE_SENT',
       app: APP,
@@ -54,24 +52,13 @@
     }
   }
 
-  // Multiple selector fallbacks in priority order — ChatGPT changes DOM frequently
   function getTextarea() {
+    // Claude uses a contenteditable div
     return (
-      document.querySelector('#prompt-textarea') ||
-      document.querySelector('textarea[data-id="root"]') ||
-      document.querySelector('div[contenteditable="true"][id="prompt-textarea"]') ||
-      document.querySelector('div[contenteditable="true"][tabindex="0"]') ||
-      document.querySelector('textarea[placeholder]') ||
+      document.querySelector('div[contenteditable="true"][data-placeholder]') ||
+      document.querySelector('div[contenteditable="true"].ProseMirror') ||
+      document.querySelector('div[contenteditable="true"]') ||
       document.querySelector('textarea')
-    )
-  }
-
-  function getSendButton() {
-    return (
-      document.querySelector('[data-testid="send-button"]') ||
-      document.querySelector('button[aria-label*="Send"]') ||
-      document.querySelector('button[aria-label*="send"]') ||
-      document.querySelector('button[data-testid*="send"]')
     )
   }
 
@@ -84,30 +71,18 @@
       if (e.key === 'Enter' && !e.shiftKey) onMessageSend(textarea)
     })
 
-    const sendBtn = getSendButton()
+    const sendBtn = document.querySelector('button[aria-label*="Send"], button[data-value="send"]')
     if (sendBtn && !sendBtn.__sentraBound) {
       sendBtn.__sentraBound = true
       sendBtn.addEventListener('click', () => onMessageSend(textarea))
     }
   }
 
-  // Retry on DOM changes (SPA navigation + ChatGPT re-renders input on new chats)
   const observer = new MutationObserver(() => attachListeners())
   observer.observe(document.body, { childList: true, subtree: true })
   attachListeners()
 
-  // Fallback poll — catches cases where MutationObserver fires before element is ready
-  const retryInterval = setInterval(() => {
-    if (getTextarea()?.__sentraBound) {
-      clearInterval(retryInterval)
-    } else {
-      attachListeners()
-    }
-  }, 2000)
-
   window.addEventListener('beforeunload', () => {
     chrome.runtime.sendMessage({ type: 'SESSION_END', app: APP })
-    clearInterval(retryInterval)
-    observer.disconnect()
   })
 })()

@@ -43,8 +43,20 @@ router.post('/signal', async (req, res) => {
   const device = db.prepare('SELECT * FROM devices WHERE device_token = ?').get(deviceToken)
   if (!device) return res.status(401).json({ error: 'Unknown device.' })
 
-  const { type, payload = {} } = req.body ?? {}
+  const { type, payload: rawPayload = {} } = req.body ?? {}
   if (!type) return res.status(400).json({ error: 'Signal type is required.' })
+
+  // Zero-Knowledge: strip any text fields before storing — metadata only
+  const ALLOWED_KEYS = new Set([
+    'app','platform','session_minutes','sessions_today','duration_minutes',
+    'start_time','total_hours','day','apps_scanned','threats_found',
+    'attempts','contact_type','contact_age_unknown','data_type',
+    'topic_category','flagged','prompt_pattern','session_frequency',
+    'persona_type','message','risk_score','level',
+  ])
+  const payload = Object.fromEntries(
+    Object.entries(rawPayload).filter(([k]) => ALLOWED_KEYS.has(k))
+  )
 
   const child  = db.prepare('SELECT * FROM children WHERE id = ?').get(device.child_id)
   const family = db.prepare('SELECT * FROM families WHERE id = ?').get(child.family_id)
@@ -99,6 +111,8 @@ router.post('/signal', async (req, res) => {
     level,
     alert_id: alertId,
     ai_powered: !!ai,
+    device_name: device.name,
+    child_name: child.name,
   })
 })
 

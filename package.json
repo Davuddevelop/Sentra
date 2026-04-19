@@ -32,12 +32,14 @@
     "@studio-freight/lenis": "^1.0.42",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.9.0",
+    "chart.js": "^4.5.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "gsap": "^3.15.0",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^8.0.5"
+    "nodemailer": "^8.0.5",
+    "qrcode": "^1.5.4"
   }
 }

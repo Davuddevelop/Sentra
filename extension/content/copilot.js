@@ -1,5 +1,5 @@
 /**
- * Sentra — ChatGPT content script
+ * Sentra — Microsoft Copilot content script
  * Monitors: message send events, session duration, pattern detection
  * Privacy: only checks first 80 chars for pattern matching, never stores content
  */
@@ -8,11 +8,10 @@
   if (window.__sentraLoaded) return
   window.__sentraLoaded = true
 
-  const APP = 'ChatGPT'
+  const APP = 'Copilot'
 
   chrome.runtime.sendMessage({ type: 'SESSION_START', app: APP })
 
-  let messageCount = 0
   let romanticSignalFired = false
 
   const ROMANTIC_KEYWORDS = [
@@ -33,7 +32,6 @@
     const firstChars = text.slice(0, 80)
     const lower = firstChars.toLowerCase()
 
-    messageCount++
     chrome.runtime.sendMessage({
       type: 'MESSAGE_SENT',
       app: APP,
@@ -54,60 +52,35 @@
     }
   }
 
-  // Multiple selector fallbacks in priority order — ChatGPT changes DOM frequently
-  function getTextarea() {
+  function getInput() {
     return (
-      document.querySelector('#prompt-textarea') ||
-      document.querySelector('textarea[data-id="root"]') ||
-      document.querySelector('div[contenteditable="true"][id="prompt-textarea"]') ||
-      document.querySelector('div[contenteditable="true"][tabindex="0"]') ||
-      document.querySelector('textarea[placeholder]') ||
+      document.querySelector('textarea[id*="userInput"], textarea[placeholder*="message"], textarea[placeholder*="Ask"]') ||
+      document.querySelector('div[contenteditable="true"][role="textbox"]') ||
       document.querySelector('textarea')
     )
   }
 
-  function getSendButton() {
-    return (
-      document.querySelector('[data-testid="send-button"]') ||
-      document.querySelector('button[aria-label*="Send"]') ||
-      document.querySelector('button[aria-label*="send"]') ||
-      document.querySelector('button[data-testid*="send"]')
-    )
-  }
-
   function attachListeners() {
-    const textarea = getTextarea()
-    if (!textarea || textarea.__sentraBound) return
-    textarea.__sentraBound = true
+    const input = getInput()
+    if (!input || input.__sentraBound) return
+    input.__sentraBound = true
 
-    textarea.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) onMessageSend(textarea)
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) onMessageSend(input)
     })
 
-    const sendBtn = getSendButton()
+    const sendBtn = document.querySelector('button[aria-label*="Submit"], button[aria-label*="Send"], button[type="submit"]')
     if (sendBtn && !sendBtn.__sentraBound) {
       sendBtn.__sentraBound = true
-      sendBtn.addEventListener('click', () => onMessageSend(textarea))
+      sendBtn.addEventListener('click', () => onMessageSend(input))
     }
   }
 
-  // Retry on DOM changes (SPA navigation + ChatGPT re-renders input on new chats)
   const observer = new MutationObserver(() => attachListeners())
   observer.observe(document.body, { childList: true, subtree: true })
   attachListeners()
 
-  // Fallback poll — catches cases where MutationObserver fires before element is ready
-  const retryInterval = setInterval(() => {
-    if (getTextarea()?.__sentraBound) {
-      clearInterval(retryInterval)
-    } else {
-      attachListeners()
-    }
-  }, 2000)
-
   window.addEventListener('beforeunload', () => {
     chrome.runtime.sendMessage({ type: 'SESSION_END', app: APP })
-    clearInterval(retryInterval)
-    observer.disconnect()
   })
 })()
