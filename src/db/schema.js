@@ -39,10 +39,11 @@ db.exec(`
 
   /* ── Families ─────────────────────────────────────────── */
   CREATE TABLE IF NOT EXISTS families (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name       TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    co_owner_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    name         TEXT NOT NULL,
+    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   /* ── Children ─────────────────────────────────────────── */
@@ -102,6 +103,11 @@ db.exec(`
 `)
 
 // ── Column migrations (safe: skipped if column already exists) ──
+const famCols = db.pragma('table_info(families)').map(r => r.name)
+if (!famCols.includes('co_owner_id')) {
+  db.exec('ALTER TABLE families ADD COLUMN co_owner_id INTEGER REFERENCES users(id)')
+}
+
 const userCols = db.pragma('table_info(users)').map(r => r.name)
 const addIfMissing = (col, def) => {
   if (!userCols.includes(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${def}`)

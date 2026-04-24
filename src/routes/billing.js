@@ -2,6 +2,7 @@ import { Router } from 'express'
 import Stripe from 'stripe'
 import db from '../db/schema.js'
 import { requireAuth } from '../middleware/auth.js'
+import { PLAN_LIMITS } from '../config/plans.js'
 
 const router  = Router()
 const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder')
@@ -130,11 +131,10 @@ function express_raw() {
 
 /* ── GET /api/billing/status ─────────────────────────────── */
 router.get('/status', requireAuth, (req, res) => {
-  const planLimits = { starter: 1, family: 5, 'family-plus': 999 }
   res.json({
     plan:         req.user.plan,
     plan_status:  req.user.plan_status,
-    device_limit: planLimits[req.user.plan] ?? 1,
+    device_limit: PLAN_LIMITS[req.user.plan] ?? 1,
     has_stripe:   !!req.user.stripe_customer_id,
   })
 })
