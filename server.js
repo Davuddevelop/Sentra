@@ -20,7 +20,8 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
-  'http://localhost:8000'
+  'http://localhost:8000',
+  ...(process.env.APP_URL ? [process.env.APP_URL] : []),
 ]
 
 app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }))
@@ -70,6 +71,13 @@ app.use('/api', signalRoutes)
 // ─── Billing (/api/billing/*) ────────────────────────────
 // Webhook must use raw body — mount before express.json() would reparse
 app.use('/api/billing', billingRoutes)
+
+// ─── Static frontend (production) ────────────────────────
+app.use(express.static(join(__dirname, 'dist')))
+// SPA fallback: any non-API path serves index.html
+app.get(/^(?!\/api).*$/, (_req, res) => {
+  res.sendFile(join(__dirname, 'dist/index.html'))
+})
 
 // ─── 90-day data purge (runs at midnight daily) ───────────────
 function runPurge() {
