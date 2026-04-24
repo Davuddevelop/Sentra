@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" }
+  ],
+  "crons": [
+    { "path": "/api/cron/purge",         "schedule": "0 0 * * *" },
+    { "path": "/api/cron/weekly-digest", "schedule": "0 8 * * 0" }
+  ]
+}

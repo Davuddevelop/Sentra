@@ -16,7 +16,7 @@ const COOKIE_OPTS = {
   secure: process.env.NODE_ENV === 'production'
 }
 
-const EMAIL_RE   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const VALID_PLANS = ['starter', 'family', 'family-plus']
 
 function issueToken(user) {
@@ -40,20 +40,17 @@ router.post('/register', async (req, res) => {
 
   try {
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS)
+    const consentToken  = crypto.randomBytes(24).toString('hex')
 
-    // Generate a consent verification token (COPPA requirement)
-    const consentToken = crypto.randomBytes(24).toString('hex')
-
-    const { lastInsertRowid: userId } = db
+    const { lastInsertRowid: userId } = await db
       .prepare('INSERT INTO users (name, email, password_hash, plan, consent_token, consent_sent_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
       .run(name.trim(), email.toLowerCase().trim(), password_hash, chosenPlan, consentToken)
 
-    // Auto-create a family for this parent
-    const { lastInsertRowid: familyId } = db
+    const { lastInsertRowid: familyId } = await db
       .prepare('INSERT INTO families (owner_id, name) VALUES (?, ?)')
       .run(userId, `${name.trim()}'s Family`)
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
     const sessionToken = issueToken(user)
 
     setImmediate(() => {
@@ -78,7 +75,7 @@ router.post('/login', async (req, res) => {
 
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' })
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim())
+  const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim())
   if (!user) return res.status(401).json({ error: 'Invalid email or password.' })
 
   const match = await bcrypt.compare(password, user.password_hash)
@@ -90,32 +87,30 @@ router.post('/login', async (req, res) => {
 })
 
 /* ── GET /api/auth/verify-consent?token=xxx ─────────────── */
-// Parent clicks the link in their email — marks consent as verified
-router.get('/verify-consent', (req, res) => {
+router.get('/verify-consent', async (req, res) => {
   const { token } = req.query
   if (!token) return res.status(400).send('Invalid link.')
 
-  const user = db.prepare('SELECT * FROM users WHERE consent_token = ?').get(token)
+  const user = await db.prepare('SELECT * FROM users WHERE consent_token = ?').get(token)
   if (!user) return res.status(404).send('Link expired or already used.')
 
-  db.prepare('UPDATE users SET consent_verified = 1, consent_token = NULL WHERE id = ?').run(user.id)
+  await db.prepare('UPDATE users SET consent_verified = 1, consent_token = NULL WHERE id = ?').run(user.id)
 
-  // Redirect to dashboard with a success flag
   const appUrl = process.env.APP_URL || 'http://localhost:5173'
   res.redirect(`${appUrl}/dashboard.html?consent=verified`)
 })
 
 /* ── POST /api/auth/resend-consent ──────────────────────── */
-router.post('/resend-consent', (req, res) => {
+router.post('/resend-consent', async (req, res) => {
   const token = req.cookies?.token
   if (!token) return res.status(401).json({ error: 'Not authenticated.' })
   try {
     const payload = jwt.verify(token, JWT_SECRET)
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id)
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id)
     if (!user || user.consent_verified) return res.json({ ok: true })
 
     const consentToken = crypto.randomBytes(24).toString('hex')
-    db.prepare('UPDATE users SET consent_token = ?, consent_sent_at = CURRENT_TIMESTAMP WHERE id = ?')
+    await db.prepare('UPDATE users SET consent_token = ?, consent_sent_at = CURRENT_TIMESTAMP WHERE id = ?')
       .run(consentToken, user.id)
     setImmediate(() => sendConsentEmail({ name: user.name, email: user.email, consentToken }))
     res.json({ ok: true })
@@ -131,13 +126,13 @@ router.post('/logout', (_req, res) => {
 })
 
 /* ── GET /api/auth/me ────────────────────────────────────── */
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   const token = req.cookies?.token
   if (!token) return res.status(401).json({ error: 'Not authenticated.' })
 
   try {
     const payload = jwt.verify(token, JWT_SECRET)
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id)
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id)
     if (!user) return res.status(401).json({ error: 'User not found.' })
     res.json({ user: safeUser(user) })
   } catch {

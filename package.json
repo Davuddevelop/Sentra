@@ -31,8 +31,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
     "@studio-freight/lenis": "^1.0.42",
+    "@libsql/client": "^0.14.0",
     "bcrypt": "^6.0.0",
-    "better-sqlite3": "^12.9.0",
     "chart.js": "^4.5.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

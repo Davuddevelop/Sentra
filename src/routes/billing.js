@@ -9,12 +9,11 @@ const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder
 const APP_URL = process.env.APP_URL || 'http://localhost:5173'
 
 const PLANS = {
-  family:       { priceId: process.env.STRIPE_PRICE_FAMILY       || 'price_family',       name: 'Family',       devices: 5  },
-  'family-plus':{ priceId: process.env.STRIPE_PRICE_FAMILY_PLUS  || 'price_family_plus',  name: 'Family+',      devices: 999 },
+  family:        { priceId: process.env.STRIPE_PRICE_FAMILY      || 'price_family',      name: 'Family',  devices: 5   },
+  'family-plus': { priceId: process.env.STRIPE_PRICE_FAMILY_PLUS || 'price_family_plus', name: 'Family+', devices: 999 },
 }
 
 /* ── POST /api/billing/checkout ──────────────────────────── */
-// Creates a Stripe Checkout session and returns the URL
 router.post('/checkout', requireAuth, async (req, res) => {
   const { plan } = req.body ?? {}
   const planConfig = PLANS[plan]
@@ -29,19 +28,17 @@ router.post('/checkout', requireAuth, async (req, res) => {
         metadata: { sentra_user_id: String(req.user.id) },
       })
       customerId = customer.id
-      db.prepare('UPDATE users SET stripe_customer_id = ? WHERE id = ?').run(customerId, req.user.id)
+      await db.prepare('UPDATE users SET stripe_customer_id = ? WHERE id = ?').run(customerId, req.user.id)
     }
 
     const session = await stripe.checkout.sessions.create({
-      customer:    customerId,
-      mode:        'subscription',
-      line_items:  [{ price: planConfig.priceId, quantity: 1 }],
+      customer:   customerId,
+      mode:       'subscription',
+      line_items: [{ price: planConfig.priceId, quantity: 1 }],
       success_url: `${APP_URL}/dashboard.html?upgraded=1`,
       cancel_url:  `${APP_URL}/dashboard.html`,
-      metadata:    { sentra_user_id: String(req.user.id), plan },
-      subscription_data: {
-        metadata: { sentra_user_id: String(req.user.id), plan },
-      },
+      metadata: { sentra_user_id: String(req.user.id), plan },
+      subscription_data: { metadata: { sentra_user_id: String(req.user.id), plan } },
     })
 
     res.json({ url: session.url })
@@ -52,7 +49,6 @@ router.post('/checkout', requireAuth, async (req, res) => {
 })
 
 /* ── POST /api/billing/portal ────────────────────────────── */
-// Opens Stripe Customer Portal so parent can manage/cancel subscription
 router.post('/portal', requireAuth, async (req, res) => {
   if (!req.user.stripe_customer_id) {
     return res.status(400).json({ error: 'No active subscription found.' })
@@ -69,9 +65,7 @@ router.post('/portal', requireAuth, async (req, res) => {
 })
 
 /* ── POST /api/billing/webhook ───────────────────────────── */
-// Stripe sends subscription lifecycle events here
-// Set STRIPE_WEBHOOK_SECRET in .env and point Stripe dashboard → this URL
-router.post('/webhook', express_raw(), (req, res) => {
+router.post('/webhook', express_raw(), async (req, res) => {
   const sig = req.headers['stripe-signature']
   let event
 
@@ -87,9 +81,8 @@ router.post('/webhook', express_raw(), (req, res) => {
       const userId  = parseInt(session.metadata?.sentra_user_id)
       const plan    = session.metadata?.plan
       if (userId && plan) {
-        db.prepare('UPDATE users SET plan = ?, plan_status = ?, stripe_sub_id = ? WHERE id = ?')
+        await db.prepare('UPDATE users SET plan = ?, plan_status = ?, stripe_sub_id = ? WHERE id = ?')
           .run(plan, 'active', session.subscription, userId)
-        console.log(`[billing] User ${userId} upgraded to ${plan}`)
       }
       break
     }
@@ -98,9 +91,8 @@ router.post('/webhook', express_raw(), (req, res) => {
       const sub    = event.data.object
       const userId = parseInt(sub.metadata?.sentra_user_id)
       if (userId) {
-        db.prepare('UPDATE users SET plan = ?, plan_status = ? WHERE id = ?')
+        await db.prepare('UPDATE users SET plan = ?, plan_status = ? WHERE id = ?')
           .run('starter', event.type === 'customer.subscription.paused' ? 'paused' : 'cancelled', userId)
-        console.log(`[billing] User ${userId} subscription ${event.type}`)
       }
       break
     }
@@ -109,7 +101,7 @@ router.post('/webhook', express_raw(), (req, res) => {
       const userId = parseInt(sub.metadata?.sentra_user_id)
       const plan   = sub.metadata?.plan
       if (userId && plan) {
-        db.prepare('UPDATE users SET plan = ?, plan_status = ? WHERE id = ?')
+        await db.prepare('UPDATE users SET plan = ?, plan_status = ? WHERE id = ?')
           .run(plan, sub.status === 'active' ? 'active' : sub.status, userId)
       }
       break
@@ -119,7 +111,6 @@ router.post('/webhook', express_raw(), (req, res) => {
   res.json({ received: true })
 })
 
-// Raw body parser needed for Stripe webhook signature verification
 function express_raw() {
   return (req, res, next) => {
     let data = ''
