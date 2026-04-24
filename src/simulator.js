@@ -174,6 +174,8 @@ function seedHistoricalWeek(devices) {
       const device   = devices[Math.floor(Math.random() * devices.length)]
 
       // Spread signals across random hours of the day
+      const hour   = 8 + Math.floor(Math.random() * 14)
+      const minute = Math.floor(Math.random() * 60)
       const d      = new Date()
       d.setDate(d.getDate() - daysAgo)
       d.setHours(hour, minute, 0, 0)

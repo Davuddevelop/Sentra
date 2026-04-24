@@ -59,7 +59,7 @@ function alertEmail({ parentName, parentEmail, childName, alert }) {
         <div style="font-size:15px;font-weight:500;color:#1A2A22">${childName}</div>
       </div>
 
-      <a href="http://localhost:8000/dashboard.html"
+      <a href="${process.env.APP_URL || 'http://localhost:5173'}/dashboard.html"
          style="display:inline-block;background:#1A2A22;color:#F8F4E8;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:14px;font-weight:500">
         View in dashboard →
       </a>
@@ -93,7 +93,7 @@ function welcomeEmail({ name, email }) {
       <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 24px">
         Your Sentra account is ready. Add your first child to start monitoring — setup takes under 3 minutes.
       </p>
-      <a href="http://localhost:8000/dashboard.html"
+      <a href="${process.env.APP_URL || 'http://localhost:5173'}/dashboard.html"
          style="display:inline-block;background:#2C5A3F;color:#F8F4E8;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:14px;font-weight:500">
         Go to dashboard →
       </a>

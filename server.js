@@ -122,7 +122,7 @@ function scheduleWeeklyDigest() {
   setTimeout(() => { runWeeklyDigest(); setInterval(runWeeklyDigest, 7 * 24 * 60 * 60 * 1000) }, delay)
 }
 
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Sentra API → http://localhost:${PORT}`)
   startSimulator()
