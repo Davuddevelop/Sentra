@@ -1,0 +1,16 @@
+{
+  "name": "Sentra Dev",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "forwardPorts": [8000, 3001],
+  "portsAttributes": {
+    "8000": { "label": "Frontend", "onAutoForward": "openBrowser" },
+    "3001": { "label": "API", "onAutoForward": "silent" }
+  },
+  "postCreateCommand": "npm install && cp -n .env.example .env",
+  "postStartCommand": "npm run dev",
+  "customizations": {
+    "vscode": {
+      "extensions": ["esbenp.prettier-vscode", "dbaeumer.vscode-eslint"]
+    }
+  }
+}
