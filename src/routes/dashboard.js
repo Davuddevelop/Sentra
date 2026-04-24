@@ -2,6 +2,7 @@ import { Router } from 'express'
 import crypto from 'crypto'
 import { requireAuth, requireFamily } from '../middleware/auth.js'
 import db from '../db/schema.js'
+import { PLAN_LIMITS } from '../config/plans.js'
 
 const router = Router()
 
@@ -72,6 +73,19 @@ router.post('/family/device', requireAuth, requireFamily, (req, res) => {
 
   const child = db.prepare('SELECT * FROM children WHERE id = ? AND family_id = ?').get(child_id, req.family.id)
   if (!child) return res.status(403).json({ error: 'Child not found.' })
+
+  const limit = PLAN_LIMITS[req.user.plan] ?? 1
+  const { count } = db.prepare(`
+    SELECT COUNT(*) as count FROM devices
+    JOIN children ON children.id = devices.child_id
+    WHERE children.family_id = ?
+  `).get(req.family.id)
+  if (count >= limit) {
+    return res.status(403).json({
+      error: `Your ${req.user.plan} plan allows up to ${limit} device${limit === 1 ? '' : 's'}. Upgrade to add more.`,
+      upgrade_required: true,
+    })
+  }
 
   const token = crypto.randomBytes(16).toString('hex')
 
@@ -210,6 +224,32 @@ router.delete('/account', requireAuth, (req, res) => {
   db.prepare('DELETE FROM users WHERE id = ?').run(req.user.id)
   res.clearCookie('token')
   res.json({ ok: true, message: 'Account and all associated data permanently deleted.' })
+})
+
+/* ── POST /api/family/co-owner ───────────────────────────── */
+// Owner invites another registered user as co-parent by email
+router.post('/family/co-owner', requireAuth, requireFamily, (req, res) => {
+  if (req.family.owner_id !== req.user.id) {
+    return res.status(403).json({ error: 'Only the family owner can add a co-parent.' })
+  }
+  const { email } = req.body ?? {}
+  if (!email) return res.status(400).json({ error: 'email is required.' })
+
+  const target = db.prepare('SELECT id, name, email FROM users WHERE email = ?').get(email.toLowerCase().trim())
+  if (!target) return res.status(404).json({ error: 'No Sentra account found with that email.' })
+  if (target.id === req.user.id) return res.status(400).json({ error: 'That is your own account.' })
+
+  db.prepare('UPDATE families SET co_owner_id = ? WHERE id = ?').run(target.id, req.family.id)
+  res.json({ ok: true, co_owner: { id: target.id, name: target.name, email: target.email } })
+})
+
+/* ── DELETE /api/family/co-owner ─────────────────────────── */
+router.delete('/family/co-owner', requireAuth, requireFamily, (req, res) => {
+  if (req.family.owner_id !== req.user.id) {
+    return res.status(403).json({ error: 'Only the family owner can remove a co-parent.' })
+  }
+  db.prepare('UPDATE families SET co_owner_id = NULL WHERE id = ?').run(req.family.id)
+  res.json({ ok: true })
 })
 
 /* ── GET /api/export ─────────────────────────────────────── */

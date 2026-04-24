@@ -20,8 +20,8 @@ export function requireAuth(req, res, next) {
 
 export function requireFamily(req, res, next) {
   const family = db
-    .prepare('SELECT * FROM families WHERE owner_id = ?')
-    .get(req.user.id)
+    .prepare('SELECT * FROM families WHERE owner_id = ? OR co_owner_id = ?')
+    .get(req.user.id, req.user.id)
   if (!family) return res.status(404).json({ error: 'Family not found.' })
   req.family = family
   next()
