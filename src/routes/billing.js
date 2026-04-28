@@ -69,8 +69,14 @@ router.post('/webhook', express_raw(), async (req, res) => {
   const sig = req.headers['stripe-signature']
   let event
 
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    console.error('[billing] STRIPE_WEBHOOK_SECRET not configured — rejecting webhook')
+    return res.status(500).send('Webhook not configured')
+  }
+
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET || '')
+    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret)
   } catch (err) {
     return res.status(400).send(`Webhook error: ${err.message}`)
   }

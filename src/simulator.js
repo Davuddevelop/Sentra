@@ -1,5 +1,6 @@
 import db from './db/schema.js'
 import crypto from 'crypto'
+import bcrypt from 'bcrypt'
 
 const DEMO_EMAIL    = 'demo@sentra.app'
 const DEMO_PASSWORD = 'sentra-demo-2025'
@@ -28,9 +29,10 @@ async function ensureDemoFamily() {
   let user = await db.prepare('SELECT * FROM users WHERE email = ?').get(DEMO_EMAIL)
 
   if (!user) {
+    const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10)
     const { lastInsertRowid: userId } = await db
       .prepare('INSERT INTO users (name, email, password_hash, plan) VALUES (?, ?, ?, ?)')
-      .run('Demo Parent', DEMO_EMAIL, DEMO_PASSWORD, 'family')
+      .run('Demo Parent', DEMO_EMAIL, passwordHash, 'family')
 
     const { lastInsertRowid: familyId } = await db
       .prepare('INSERT INTO families (owner_id, name) VALUES (?, ?)')

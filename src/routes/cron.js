@@ -6,7 +6,12 @@ const router = Router()
 
 function verifyCron(req, res, next) {
   if (process.env.NODE_ENV !== 'production') return next()
-  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET || ''}`) {
+  const secret = process.env.CRON_SECRET
+  if (!secret) {
+    console.error('[cron] CRON_SECRET not configured — rejecting request')
+    return res.status(500).json({ error: 'Cron not configured' })
+  }
+  if (req.headers.authorization !== `Bearer ${secret}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
   next()

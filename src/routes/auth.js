@@ -2,10 +2,19 @@ import { Router } from 'express'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
+import rateLimit from 'express-rate-limit'
 import db from '../db/schema.js'
 import { sendWelcomeEmail, sendConsentEmail } from '../services/email.js'
 
 const router = Router()
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts — try again in 15 minutes.' },
+})
 const SALT_ROUNDS = 12
 const JWT_SECRET = process.env.JWT_SECRET || 'sentra-dev-secret-change-in-prod'
 const JWT_EXPIRES = '7d'
@@ -29,7 +38,7 @@ function safeUser(user) {
 }
 
 /* ── POST /api/auth/register ─────────────────────────────── */
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   const { name, email, password, plan } = req.body ?? {}
 
   if (!name?.trim())                      return res.status(400).json({ error: 'Name is required.' })
@@ -70,7 +79,7 @@ router.post('/register', async (req, res) => {
 })
 
 /* ── POST /api/auth/login ────────────────────────────────── */
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   const { email, password } = req.body ?? {}
 
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' })

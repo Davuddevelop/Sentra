@@ -1,10 +1,20 @@
 import { Router } from 'express'
+import rateLimit from 'express-rate-limit'
 import db from '../db/schema.js'
 import { analyzeSignal } from '../ai/analyzer.js'
 import { sendAlertEmail } from '../services/email.js'
 import { sendAlertPush } from '../services/push.js'
 
 const router = Router()
+
+const signalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  keyGenerator: (req) => req.headers['x-device-token'] || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Signal rate limit exceeded.' },
+})
 
 const RULE_SCORES = {
   'ai.romantic_roleplay':    85,
@@ -36,7 +46,7 @@ const CATEGORY = {
 }
 
 /* ── POST /api/signal ────────────────────────────────────── */
-router.post('/signal', async (req, res) => {
+router.post('/signal', signalLimiter, async (req, res) => {
   const deviceToken = req.headers['x-device-token']
   if (!deviceToken) return res.status(401).json({ error: 'Device token required.' })
 

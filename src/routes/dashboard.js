@@ -37,18 +37,20 @@ router.post('/family/child', requireAuth, requireFamily, async (req, res) => {
 router.get('/alerts', requireAuth, requireFamily, async (req, res) => {
   const limit      = Math.min(parseInt(req.query.limit)  || 20, 100)
   const offset     = parseInt(req.query.offset) || 0
-  const days       = Math.min(parseInt(req.query.days) || 30, 30)
+  const days       = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 30)
   const childId    = req.query.child_id ? parseInt(req.query.child_id) : null
-  const level      = req.query.level    || null
+  const VALID_LEVELS = ['critical', 'warn', 'info', 'ok']
+  const level      = VALID_LEVELS.includes(req.query.level) ? req.query.level : null
   const unreadOnly = req.query.unread === 'true'
 
+  const cutoff     = new Date(Date.now() - days * 86400 * 1000).toISOString()
   const conditions = ['a.family_id = ?']
   const args       = [req.family.id]
 
   if (unreadOnly) { conditions.push('a.read = 0') }
   if (childId)    { conditions.push('a.child_id = ?'); args.push(childId) }
   if (level)      { conditions.push('a.level = ?');    args.push(level) }
-  conditions.push(`a.created_at > datetime('now', '-${days} days')`)
+  conditions.push('a.created_at > ?'); args.push(cutoff)
 
   const where = 'WHERE ' + conditions.join(' AND ')
 
@@ -106,14 +108,18 @@ router.patch('/alerts/:id/read', requireAuth, requireFamily, async (req, res) =>
 
 /* ── GET /api/activity ───────────────────────────────────── */
 router.get('/activity', requireAuth, requireFamily, async (req, res) => {
-  const days    = Math.min(parseInt(req.query.days) || 7, 30)
+  const days    = Math.min(Math.max(parseInt(req.query.days) || 7, 1), 30)
   const childId = req.query.child_id ? parseInt(req.query.child_id) : null
-  const level   = req.query.level || null
+  const VALID_LEVELS = ['critical', 'warn', 'info', 'ok']
+  const level   = VALID_LEVELS.includes(req.query.level) ? req.query.level : null
+
+  // Compute cutoff in JS so it goes through a parameterized ? — no template literal SQL
+  const cutoff = new Date(Date.now() - days * 86400 * 1000).toISOString()
 
   const familyFilter = 'a.family_id = ?'
   const childFilter  = childId ? ' AND a.child_id = ?' : ''
   const levelFilter  = level   ? ' AND a.level = ?'   : ''
-  const baseArgs     = [req.family.id, ...(childId ? [childId] : []), ...(level ? [level] : [])]
+  const baseArgs     = [req.family.id, ...(childId ? [childId] : []), ...(level ? [level] : []), cutoff]
 
   const byDayRaw = await db.prepare(`
     SELECT date(a.created_at) as date, COUNT(*) as count,
@@ -122,7 +128,7 @@ router.get('/activity', requireAuth, requireFamily, async (req, res) => {
       SUM(CASE WHEN a.level='info'     THEN 1 ELSE 0 END) as info
     FROM alerts a
     WHERE ${familyFilter}${childFilter}${levelFilter}
-      AND a.created_at > datetime('now', '-${days} days')
+      AND a.created_at > ?
     GROUP BY date(a.created_at) ORDER BY date ASC
   `).all(...baseArgs)
 
@@ -138,25 +144,26 @@ router.get('/activity', requireAuth, requireFamily, async (req, res) => {
   const byCategory = await db.prepare(`
     SELECT category, COUNT(*) as count
     FROM alerts a WHERE ${familyFilter}${childFilter}${levelFilter}
-      AND a.created_at > datetime('now', '-${days} days')
+      AND a.created_at > ?
     GROUP BY category ORDER BY count DESC
   `).all(...baseArgs)
 
+  const byLevelArgs = [req.family.id, ...(childId ? [childId] : []), cutoff]
   const byLevel = await db.prepare(`
     SELECT level, COUNT(*) as count
     FROM alerts a WHERE ${familyFilter}${childFilter}
-      AND a.created_at > datetime('now', '-${days} days')
+      AND a.created_at > ?
     GROUP BY level ORDER BY count DESC
-  `).all(...[req.family.id, ...(childId ? [childId] : [])])
+  `).all(...byLevelArgs)
 
   const byChild = await db.prepare(`
     SELECT c.name, c.id, COUNT(a.id) as count,
       SUM(CASE WHEN a.level='critical' THEN 1 ELSE 0 END) as critical,
       SUM(CASE WHEN a.level='warn'     THEN 1 ELSE 0 END) as warn
     FROM alerts a JOIN children c ON c.id = a.child_id
-    WHERE a.family_id = ? AND a.created_at > datetime('now', '-${days} days')
+    WHERE a.family_id = ? AND a.created_at > ?
     GROUP BY a.child_id ORDER BY count DESC
-  `).all(req.family.id)
+  `).all(req.family.id, cutoff)
 
   res.json({ byDay, byCategory, byLevel, byChild })
 })

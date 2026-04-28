@@ -7,7 +7,8 @@
  * close) instead of an in-memory object.
  */
 
-const API_BASE = 'http://localhost:3001'
+// Update this to your production URL before publishing to the Chrome Store
+const API_BASE = 'https://sentra.vercel.app'
 
 // ── Signal queue (persisted in chrome.storage.local) ────────────────────────
 async function enqueueSignal(signal) {
@@ -23,7 +24,8 @@ async function flushQueue() {
   const toSend = [...queue]
   await chrome.storage.local.set({ queue: [] })
 
-  for (const signal of toSend) {
+  let failedFrom = -1
+  for (let i = 0; i < toSend.length; i++) {
     try {
       await fetch(`${API_BASE}/api/signal`, {
         method: 'POST',
@@ -31,12 +33,18 @@ async function flushQueue() {
           'Content-Type': 'application/json',
           'X-Device-Token': deviceToken,
         },
-        body: JSON.stringify({ type: signal.type, payload: signal.payload }),
+        body: JSON.stringify({ type: toSend[i].type, payload: toSend[i].payload }),
       })
     } catch (err) {
-      console.warn('[sentra] signal send failed, re-queuing:', err.message)
-      await enqueueSignal(signal)
+      console.warn('[sentra] signal send failed, re-queuing remaining:', err.message)
+      failedFrom = i
       break
+    }
+  }
+
+  if (failedFrom !== -1) {
+    for (const signal of toSend.slice(failedFrom)) {
+      await enqueueSignal(signal)
     }
   }
 }
