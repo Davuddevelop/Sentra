@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#1A2A22" rx="0"/>
+
+  <!-- Shield (centered, scaled from 22x26 viewBox to ~320x380, centered at 256,256) -->
+  <!-- Original path: M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z -->
+  <!-- Scale factor: 320/18 ≈ 17.78, offset so shield center aligns to 256,252 -->
+  <!-- Scaled: M(256-80,256-213) ... using transform -->
+  <g transform="translate(256,256) scale(17.78) translate(-11,-13)">
+    <path d="M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z"
+          fill="#2C5A3F"
+          stroke="#EBE2CA"
+          stroke-width="0.6"
+          stroke-linejoin="round"/>
+    <!-- Center dot -->
+    <circle cx="11" cy="13" r="2.2" fill="#F3EDDD"/>
+  </g>
+</svg>

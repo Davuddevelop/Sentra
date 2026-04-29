@@ -68,6 +68,7 @@ app.use('/api/billing', billingRoutes)
 app.use('/api/cron',    cronRoutes)
 
 // ─── Static frontend (local dev / Railway) ───────────────
+app.use(express.static(join(__dirname, 'public')))
 app.use(express.static(join(__dirname, 'dist')))
 app.get(/^(?!\/api).*$/, (_req, res) => {
   res.sendFile(join(__dirname, 'dist/index.html'))
