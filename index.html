@@ -717,6 +717,25 @@
     display: block;
   }
 
+  /* AUTH TABS */
+  .auth-tabs { display: flex; border-bottom: 1px solid var(--line-soft); margin-bottom: 24px; }
+  .auth-tab {
+    flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent;
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
+    color: var(--ink-soft); cursor: pointer; margin-bottom: -1px; transition: color 0.2s, border-color 0.2s;
+  }
+  .auth-tab.active { color: var(--moss); border-bottom-color: var(--moss); }
+  .auth-err {
+    margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+    background: rgba(200,90,46,0.07); border: 0.5px solid rgba(200,90,46,0.3);
+    font-size: 13px; color: #C85A2E; line-height: 1.45;
+  }
+  .auth-switch {
+    background: none; border: none; cursor: pointer;
+    color: var(--moss); font-size: 14px; font-family: 'Inter', sans-serif;
+    text-decoration: underline; padding: 0;
+  }
+
   /* MODAL */
   .modal-overlay {
     display: none; position: fixed; inset: 0; z-index: 300;
@@ -843,7 +862,8 @@
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
-      <button class="nav-cta" data-modal="email-modal" data-plan="family">Early access</button>
+      <a href="#" data-modal="auth-modal" data-tab="login">Log in</a>
+      <button class="nav-cta" data-modal="auth-modal" data-plan="starter">Get started</button>
     </div>
     <button class="mobile-nav-btn" id="mobile-nav-btn" aria-label="Open menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -870,7 +890,7 @@
     <a href="#how" class="mobile-nav-link">How it works</a>
     <a href="#pricing" class="mobile-nav-link">Pricing</a>
     <a href="#faq" class="mobile-nav-link">FAQ</a>
-    <button class="mobile-nav-cta" data-modal="email-modal" data-plan="family">Early access →</button>
+    <button class="mobile-nav-cta" data-modal="auth-modal" data-plan="starter">Get started →</button>
   </div>
 </div>
 
@@ -878,11 +898,11 @@
 <section class="hero">
   <div class="container hero-grid">
     <div>
-      <div class="hero-eyebrow">Now in early access</div>
+      <div class="hero-eyebrow">Free to start</div>
       <h1 class="hero-title">Parenting in the age of AI just got <em>easier</em>.</h1>
       <p class="hero-sub">Sentra is the first intelligent safety platform built for how children and teenagers actually use their devices today — watching the AI chatbots, the new apps, the hidden risks — so you don't have to become a cybersecurity expert overnight.</p>
       <div class="hero-ctas">
-        <button class="btn-primary" data-modal="email-modal" data-plan="family">Get early access — free</button>
+        <button class="btn-primary" data-modal="auth-modal" data-plan="family">Get started — free</button>
         <button class="btn-secondary" data-modal="video-modal">Watch 90-second demo</button>
       </div>
       <div class="hero-trust">
@@ -1245,7 +1265,7 @@
   <div class="container">
     <div class="section-eyebrow">Simple pricing</div>
     <h2 class="section-title">Protection that <em>pays for itself.</em></h2>
-    <p class="section-lead">Start free. Add devices as your family grows. No contracts, no surprise fees — early access pricing locked in for founding members.</p>
+    <p class="section-lead">Start free. Add devices as your family grows. No contracts, no surprise fees.</p>
 
     <div class="pricing-grid">
 
@@ -1260,7 +1280,7 @@
           <li class="price-feature">Content filtering</li>
           <li class="price-feature">Weekly email summary</li>
         </ul>
-        <button class="price-cta" data-modal="email-modal" data-plan="starter">Get started</button>
+        <button class="price-cta" data-modal="auth-modal" data-plan="starter">Get started</button>
       </div>
 
       <div class="price-card featured">
@@ -1277,7 +1297,7 @@
           <li class="price-feature">Predator Shield</li>
           <li class="price-feature">Priority support</li>
         </ul>
-        <button class="price-cta" data-modal="email-modal" data-plan="family">Join early access</button>
+        <button class="price-cta" data-modal="auth-modal" data-plan="family">Get started</button>
       </div>
 
       <div class="price-card">
@@ -1292,7 +1312,7 @@
           <li class="price-feature">Monthly expert reports</li>
           <li class="price-feature">Dedicated success manager</li>
         </ul>
-        <button class="price-cta" data-modal="email-modal" data-plan="family-plus">Join early access</button>
+        <button class="price-cta" data-modal="auth-modal" data-plan="family-plus">Get started</button>
       </div>
 
     </div>
@@ -1379,9 +1399,9 @@
 <!-- FINAL CTA -->
 <section class="final-cta">
   <h2>The internet changed.<br><em>Your protection should too.</em></h2>
-  <p>Be among the first families to experience Sentra. Join the early access list — free to start, no credit card needed.</p>
+  <p>Start protecting your family today. Free forever on Starter — no credit card needed.</p>
   <div class="hero-ctas" style="justify-content:center;">
-    <button class="btn-primary" data-modal="email-modal" data-plan="family">Get early access — free</button>
+    <button class="btn-primary" data-modal="auth-modal" data-plan="family">Get started — free</button>
     <button class="btn-secondary" data-modal="video-modal">Watch 90-second demo</button>
   </div>
 </section>
@@ -1400,7 +1420,7 @@
           </span>
           Sentra
         </div>
-        <p class="footer-brand-sub">Parental intelligence for the AI age. Now in early access.</p>
+        <p class="footer-brand-sub">Parental intelligence for the AI age.</p>
       </div>
       <div class="footer-col">
         <h5>Product</h5>
@@ -1431,23 +1451,47 @@
   </div>
 </footer>
 
-<!-- EMAIL MODAL -->
-<div id="email-modal" class="modal-overlay">
+<!-- AUTH MODAL -->
+<div id="auth-modal" class="modal-overlay">
   <div class="modal-box">
-    <button class="modal-close" data-close-modal="email-modal">✕</button>
-    <div class="modal-eyebrow">Join the waitlist</div>
-    <h2 class="modal-title">Start protecting your <em>family today.</em></h2>
-    <p class="modal-sub">Join our founding families. Get early access and a free first month — no credit card required.</p>
-    <form class="modal-form" id="waitlist-form" novalidate>
-      <input type="email" name="email" class="modal-input" placeholder="your@email.com" required autocomplete="email">
-      <select name="plan" class="modal-select">
-        <option value="starter">Starter — Free forever</option>
-        <option value="family" selected>Family — $12/month (most popular)</option>
-        <option value="family-plus">Family+ — $18/month</option>
-      </select>
-      <button type="submit" class="modal-submit">Join the waitlist</button>
-      <p class="modal-fine">No credit card. No spam. Unsubscribe anytime.</p>
-    </form>
+    <button class="modal-close" data-close-modal="auth-modal">✕</button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-register">Create account</button>
+      <button class="auth-tab" id="tab-login">Log in</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="auth-register">
+      <div class="modal-eyebrow">Free to start</div>
+      <h2 class="modal-title">Protect your <em>family today.</em></h2>
+      <p class="modal-sub">No credit card required. Upgrade anytime.</p>
+      <form class="modal-form" id="register-form" novalidate>
+        <input type="text" name="name" class="modal-input" placeholder="Your full name" required autocomplete="name">
+        <input type="email" name="email" class="modal-input" placeholder="your@email.com" required autocomplete="email">
+        <input type="password" name="password" class="modal-input" placeholder="Password (8+ characters)" required autocomplete="new-password">
+        <select name="plan" class="modal-select">
+          <option value="starter">Starter — Free forever</option>
+          <option value="family">Family — $12/month</option>
+          <option value="family-plus">Family+ — $18/month</option>
+        </select>
+        <button type="submit" class="modal-submit" id="register-btn">Create account</button>
+        <p class="modal-fine">By signing up you agree to our <a href="/public/privacy.html">Privacy Policy</a>.</p>
+      </form>
+      <div class="auth-err" id="register-err" style="display:none"></div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="auth-login" style="display:none">
+      <div class="modal-eyebrow">Welcome back</div>
+      <h2 class="modal-title">Log in to <em>Sentra.</em></h2>
+      <p class="modal-sub">No account yet? <button class="auth-switch" id="switch-to-register">Sign up free →</button></p>
+      <form class="modal-form" id="login-form" novalidate>
+        <input type="email" name="email" class="modal-input" placeholder="your@email.com" required autocomplete="email">
+        <input type="password" name="password" class="modal-input" placeholder="Password" required autocomplete="current-password">
+        <button type="submit" class="modal-submit" id="login-btn">Log in</button>
+      </form>
+      <div class="auth-err" id="login-err" style="display:none"></div>
+    </div>
   </div>
 </div>
 

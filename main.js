@@ -123,14 +123,36 @@ function closeModal(id) {
   })
 }
 
+// ── Auth tab switching ───────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  const tabReg = document.getElementById('tab-register')
+  const tabLog = document.getElementById('tab-login')
+  const panelReg = document.getElementById('auth-register')
+  const panelLog = document.getElementById('auth-login')
+  if (!tabReg) return
+  if (tab === 'login') {
+    tabReg.classList.remove('active'); tabLog.classList.add('active')
+    panelReg.style.display = 'none'; panelLog.style.display = 'block'
+  } else {
+    tabLog.classList.remove('active'); tabReg.classList.add('active')
+    panelLog.style.display = 'none'; panelReg.style.display = 'block'
+  }
+}
+document.getElementById('tab-register')?.addEventListener('click', () => switchAuthTab('register'))
+document.getElementById('tab-login')?.addEventListener('click', () => switchAuthTab('login'))
+document.getElementById('switch-to-register')?.addEventListener('click', () => switchAuthTab('register'))
+
 // Open from [data-modal] buttons
 document.querySelectorAll('[data-modal]').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', (e) => {
+    e.preventDefault()
     const modalId = btn.dataset.modal
-    // Pre-select plan if provided
-    if (modalId === 'email-modal' && btn.dataset.plan) {
-      const sel = document.querySelector('#waitlist-form [name="plan"]')
-      if (sel) sel.value = btn.dataset.plan
+    if (modalId === 'auth-modal') {
+      switchAuthTab(btn.dataset.tab === 'login' ? 'login' : 'register')
+      if (btn.dataset.plan) {
+        const sel = document.querySelector('#register-form [name="plan"]')
+        if (sel) sel.value = btn.dataset.plan
+      }
     }
     openModal(modalId)
   })
@@ -202,56 +224,72 @@ function showToast(message, type = 'success') {
   }, 4200)
 }
 
-// ─── Waitlist Form ──────────────────────────────────────────────────────────────
-const waitlistForm = document.getElementById('waitlist-form')
-waitlistForm?.addEventListener('submit', async (e) => {
+// ─── Register ───────────────────────────────────────────────────────────────────
+document.getElementById('register-form')?.addEventListener('submit', async (e) => {
   e.preventDefault()
-  const email = waitlistForm.querySelector('[name="email"]').value.trim()
-  const plan  = waitlistForm.querySelector('[name="plan"]').value
-  const btn   = waitlistForm.querySelector('button[type="submit"]')
+  const form = e.currentTarget
+  const btn  = document.getElementById('register-btn')
+  const err  = document.getElementById('register-err')
+  const name     = form.querySelector('[name="name"]').value.trim()
+  const email    = form.querySelector('[name="email"]').value.trim()
+  const password = form.querySelector('[name="password"]').value
+  const plan     = form.querySelector('[name="plan"]').value
 
-  btn.disabled = true
-  btn.textContent = 'Joining...'
+  btn.disabled = true; btn.textContent = 'Creating account...'
+  err.style.display = 'none'
 
   try {
-    const res  = await fetch('/api/waitlist', {
+    const res  = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, plan })
+      body: JSON.stringify({ name, email, password, plan }),
+      credentials: 'include',
     })
     const data = await res.json()
-
     if (res.ok) {
-      closeModal('email-modal')
-      waitlistForm.reset()
-      showToast(`You're on the list! We'll be in touch soon.`)
-      // Update social proof counter
-      const eyebrow = document.querySelector('.hero-eyebrow')
-      if (eyebrow && data.count) {
-        const base = 40000
-        eyebrow.textContent = `Now protecting ${(base + data.count).toLocaleString()}+ families`
-      }
+      window.location.href = '/dashboard.html'
     } else {
-      showToast(data.error || 'Something went wrong.', 'error')
+      err.textContent = data.error || 'Registration failed. Please try again.'
+      err.style.display = 'block'
     }
   } catch {
-    showToast('Could not connect. Please try again.', 'error')
+    err.textContent = 'Could not connect. Please try again.'
+    err.style.display = 'block'
   } finally {
-    btn.disabled = false
-    btn.textContent = 'Join the waitlist'
+    btn.disabled = false; btn.textContent = 'Create account'
   }
 })
 
-// ─── Live Stats (on load) ───────────────────────────────────────────────────────
-async function loadStats() {
+// ─── Login ───────────────────────────────────────────────────────────────────────
+document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const form = e.currentTarget
+  const btn  = document.getElementById('login-btn')
+  const err  = document.getElementById('login-err')
+  const email    = form.querySelector('[name="email"]').value.trim()
+  const password = form.querySelector('[name="password"]').value
+
+  btn.disabled = true; btn.textContent = 'Logging in...'
+  err.style.display = 'none'
+
   try {
-    const data = await fetch('/api/stats').then(r => r.json())
-    if (data.waitlist > 0) {
-      const eyebrow = document.querySelector('.hero-eyebrow')
-      if (eyebrow) {
-        eyebrow.textContent = `Now protecting ${(40000 + data.waitlist).toLocaleString()}+ families`
-      }
+    const res  = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+      credentials: 'include',
+    })
+    const data = await res.json()
+    if (res.ok) {
+      window.location.href = '/dashboard.html'
+    } else {
+      err.textContent = data.error || 'Invalid email or password.'
+      err.style.display = 'block'
     }
-  } catch { /* silent */ }
-}
-loadStats()
+  } catch {
+    err.textContent = 'Could not connect. Please try again.'
+    err.style.display = 'block'
+  } finally {
+    btn.disabled = false; btn.textContent = 'Log in'
+  }
+})
