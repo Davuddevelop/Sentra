@@ -103,6 +103,13 @@ router.get('/verify-consent', async (req, res) => {
   const user = await db.prepare('SELECT * FROM users WHERE consent_token = ?').get(token)
   if (!user) return res.status(404).send('Link expired or already used.')
 
+  const EXPIRY_MS = 72 * 60 * 60 * 1000
+  if (Date.now() - new Date(user.consent_sent_at).getTime() > EXPIRY_MS) {
+    await db.prepare('UPDATE users SET consent_token = NULL WHERE id = ?').run(user.id)
+    const appUrl = process.env.APP_URL || 'http://localhost:5173'
+    return res.status(400).send(`Link expired — consent links are valid for 72 hours. <a href="${appUrl}/dashboard.html">Log in</a> to request a new one.`)
+  }
+
   await db.prepare('UPDATE users SET consent_verified = 1, consent_token = NULL WHERE id = ?').run(user.id)
 
   const appUrl = process.env.APP_URL || 'http://localhost:5173'
