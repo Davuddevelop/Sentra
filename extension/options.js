@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3001'
+const API_BASE = 'https://sentra.vercel.app'
 
 // ── Helpers ───────────────────────────────────────────────────
 function showToast(id, msg, type) {
