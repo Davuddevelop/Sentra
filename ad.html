@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sentra — Motion Ad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..800,0..100;1,9..144,300..800,0..100&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #111c16;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  color: #F3EDDD;
+}
+
+/* ── Grain overlay ── */
+#grain {
+  position: fixed; inset: 0; z-index: 200;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.12;
+}
+
+/* ── Vignette ── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 10;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+}
+
+/* ── Progress bar ── */
+#progress {
+  position: fixed; bottom: 0; left: 0;
+  height: 2px; width: 0%;
+  background: linear-gradient(to right, #2C5A3F, #4a8c5c);
+  z-index: 300;
+  transition: width 0.1s linear;
+}
+
+/* ── Replay button ── */
+#replay {
+  position: fixed; bottom: 32px; right: 32px; z-index: 300;
+  background: rgba(44,90,63,0.2);
+  border: 0.5px solid rgba(44,90,63,0.5);
+  color: #F3EDDD;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border-radius: 100px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: background 0.2s;
+}
+#replay:hover { background: rgba(44,90,63,0.4); }
+
+/* ── Scenes ── */
+.scene {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; visibility: hidden;
+  z-index: 20;
+}
+
+/* ═══════════════════════════════
+   SCENE 1 — THE NUMBER
+═══════════════════════════════ */
+#s1 { background: #0d1510; gap: 40px; }
+
+.s1-ring-outer {
+  width: min(360px, 45vmin);
+  height: min(360px, 45vmin);
+  border-radius: 50%;
+  border: 1px solid rgba(243,237,221,0.07);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.s1-ring-outer::before {
+  content: '';
+  position: absolute; inset: 16px;
+  border-radius: 50%;
+  border: 0.5px solid rgba(243,237,221,0.04);
+}
+
+.s1-stat {
+  text-align: center;
+}
+.s1-num {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(72px, 14vmin, 128px);
+  font-weight: 300;
+  letter-spacing: -5px;
+  color: #F3EDDD;
+  line-height: 1;
+  font-variation-settings: "opsz" 144;
+}
+.s1-unit {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(10px, 1.5vmin, 13px);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(243,237,221,0.35);
+  margin-top: 10px;
+}
+
+.s1-caption {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(15px, 2vmin, 19px);
+  font-weight: 300;
+  color: rgba(243,237,221,0.5);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 520px;
+}
+.s1-caption strong { color: #F3EDDD; font-weight: 500; }
+
+.s1-src {
+  position: absolute; bottom: 32px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px; letter-spacing: 1.5px;
+  color: rgba(243,237,221,0.18);
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════
+   SCENE 2 — THE GAP
+═══════════════════════════════ */
+#s2 { background: #1A2A22; gap: 56px; }
+
+.s2-vs {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 64px;
+  align-items: center;
+  max-width: min(900px, 90vw);
+}
+.s2-divider {
+  width: 1px; height: 160px;
+  background: linear-gradient(to bottom, transparent, rgba(243,237,221,0.12), transparent);
+}
+.s2-col { text-align: center; }
+.s2-tag {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px; letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(243,237,221,0.3);
+  margin-bottom: 24px;
+}
+.s2-icon {
+  font-size: clamp(40px, 6vmin, 56px);
+  display: block; margin-bottom: 20px;
+  line-height: 1;
+}
+.s2-text {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(18px, 3vmin, 26px);
+  font-weight: 300; font-style: italic;
+  font-variation-settings: "SOFT" 80;
+  color: #F3EDDD; line-height: 1.35;
+}
+.s2-col.danger .s2-text { color: #E8C8B4; }
+
+.s2-headline {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(26px, 4vmin, 40px);
+  font-weight: 300;
+  color: #F3EDDD;
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  max-width: min(700px, 90vw);
+}
+.s2-headline em {
+  font-style: italic;
+  font-variation-settings: "SOFT" 80;
+  color: #C85A2E;
+}
+
+/* ═══════════════════════════════
+   SCENE 3 — BRAND REVEAL
+═══════════════════════════════ */
+#s3 { background: #0d1510; gap: 28px; }
+
+.s3-shield-wrap {
+  position: relative;
+  width: min(160px, 22vmin);
+  height: min(160px, 22vmin);
+  display: flex; align-items: center; justify-content: center;
+}
+.s3-glow {
+  position: absolute; inset: -50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(44,90,63,0.5) 0%, transparent 65%);
+  filter: blur(24px);
+}
+.s3-halo {
+  position: absolute; inset: -20px;
+  border-radius: 50%;
+  border: 1px solid rgba(44,90,63,0.2);
+}
+.s3-halo2 {
+  position: absolute; inset: -40px;
+  border-radius: 50%;
+  border: 0.5px solid rgba(44,90,63,0.1);
+}
+.s3-svg {
+  position: relative; z-index: 1;
+  width: 100%; height: 100%;
+  filter: drop-shadow(0 0 20px rgba(44,90,63,0.6));
+}
+
+.s3-letters {
+  display: flex; align-items: baseline;
+  gap: 0; overflow: hidden;
+}
+.s3-letter-wrap { overflow: hidden; }
+.s3-letter {
+  display: inline-block;
+  font-family: 'Fraunces', serif;
+  font-size: clamp(52px, 9vmin, 88px);
+  font-weight: 300;
+  letter-spacing: -2px;
+  color: #F3EDDD;
+  line-height: 1;
+  transform: translateY(110%);
+  font-variation-settings: "opsz" 144;
+}
+
+.s3-tag {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(10px, 1.5vmin, 13px);
+  font-weight: 300;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(243,237,221,0.35);
+  opacity: 0;
+}
+
+/* ═══════════════════════════════
+   SCENE 4 — PRODUCT DEMO
+═══════════════════════════════ */
+#s4 { background: #1A2A22; flex-direction: row; gap: min(80px, 8vw); }
+
+/* Phone */
+.s4-phone {
+  width: min(210px, 24vw);
+  height: min(430px, 55vh);
+  background: #131f18;
+  border-radius: 32px;
+  border: 4px solid #223329;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 40px 80px -20px rgba(0,0,0,0.7),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.phone-notch {
+  height: 18px;
+  background: #223329;
+  border-radius: 0 0 12px 12px;
+  width: 72px; margin: 0 auto;
+  flex-shrink: 0;
+}
+.phone-screen {
+  flex: 1; padding: 10px 10px 14px;
+  display: flex; flex-direction: column; gap: 7px;
+  overflow: hidden;
+}
+.phone-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 2px 8px;
+  border-bottom: 0.5px solid rgba(243,237,221,0.07);
+  margin-bottom: 2px;
+}
+.phone-header-brand {
+  display: flex; align-items: center; gap: 6px;
+}
+.phone-header-dot {
+  width: 14px; height: 14px;
+}
+.phone-header-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: rgba(243,237,221,0.5);
+}
+.phone-header-time {
+  font-family: 'Inter', sans-serif;
+  font-size: 8px; color: rgba(243,237,221,0.25);
+}
+
+.p-alert {
+  background: rgba(243,237,221,0.03);
+  border: 0.5px solid rgba(243,237,221,0.09);
+  border-radius: 10px;
+  padding: 9px 10px;
+  display: flex; gap: 8px; align-items: flex-start;
+  transform: translateX(115%); opacity: 0;
+}
+.p-alert.crit { border-color: rgba(200,90,46,0.25); background: rgba(200,90,46,0.05); }
+.p-alert.warn { border-color: rgba(212,160,23,0.25); background: rgba(212,160,23,0.04); }
+.p-alert.info { border-color: rgba(44,90,63,0.3); background: rgba(44,90,63,0.05); }
+
+.pa-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 4px;
+}
+.crit .pa-dot { background: #C85A2E; box-shadow: 0 0 6px rgba(200,90,46,0.5); }
+.warn .pa-dot { background: #D4A017; box-shadow: 0 0 6px rgba(212,160,23,0.4); }
+.info .pa-dot { background: #2C5A3F; }
+
+.pa-lv {
+  font-family: 'Inter', sans-serif;
+  font-size: 7px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.crit .pa-lv { color: #C85A2E; }
+.warn .pa-lv { color: #D4A017; }
+.info .pa-lv { color: rgba(243,237,221,0.4); }
+
+.pa-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px; font-weight: 500;
+  color: #F3EDDD; line-height: 1.3;
+}
+.pa-meta {
+  font-family: 'Inter', sans-serif;
+  font-size: 8px; color: rgba(243,237,221,0.35);
+  margin-top: 2px;
+}
+
+/* Demo copy */
+.s4-copy { max-width: min(400px, 45vw); }
+.s4-eyebrow {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px; letter-spacing: 3px;
+  text-transform: uppercase; color: #4a8c5c;
+  margin-bottom: 18px; opacity: 0;
+}
+.s4-headline {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(28px, 4.5vmin, 48px);
+  font-weight: 300; letter-spacing: -1px;
+  line-height: 1.12; color: #F3EDDD;
+  margin-bottom: 28px; opacity: 0;
+}
+.s4-headline em { font-style: italic; font-variation-settings: "SOFT" 80; }
+
+.s4-feats { display: flex; flex-direction: column; gap: 12px; }
+.s4-feat {
+  display: flex; gap: 12px; align-items: flex-start;
+  opacity: 0; transform: translateX(-20px);
+}
+.s4-feat-check {
+  width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;
+  background: rgba(44,90,63,0.2);
+  border: 0.5px solid rgba(44,90,63,0.45);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.s4-feat-check svg { width: 9px; height: 9px; }
+.s4-feat-text {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(12px, 1.6vmin, 14px);
+  color: rgba(243,237,221,0.6); line-height: 1.5;
+}
+.s4-feat-text strong { color: #F3EDDD; font-weight: 500; }
+
+/* ═══════════════════════════════
+   SCENE 5 — HOW IT WORKS
+═══════════════════════════════ */
+#s5 { background: #0d1510; gap: 52px; }
+
+.s5-eyebrow {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(11px, 1.5vmin, 13px);
+  font-weight: 300; letter-spacing: 5px;
+  text-transform: uppercase; color: rgba(243,237,221,0.25);
+  opacity: 0;
+}
+.s5-steps {
+  display: flex; align-items: flex-start;
+  gap: 0;
+}
+.s5-step {
+  width: min(210px, 28vw);
+  text-align: center;
+  opacity: 0; transform: translateY(28px);
+  position: relative;
+}
+.s5-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 36px; right: calc(-1 * min(60px, 8vw) - 1px);
+  width: min(120px, 16vw); height: 1px;
+  background: linear-gradient(to right, rgba(44,90,63,0.35), rgba(44,90,63,0.08));
+}
+.s5-connector { width: min(120px, 16vw); }
+
+.s5-num {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(48px, 7vmin, 72px);
+  font-weight: 300; font-style: italic;
+  font-variation-settings: "SOFT" 80;
+  color: rgba(243,237,221,0.06);
+  line-height: 1; margin-bottom: 14px;
+}
+.s5-icon {
+  width: min(64px, 8vmin); height: min(64px, 8vmin);
+  background: rgba(44,90,63,0.12);
+  border: 0.5px solid rgba(44,90,63,0.25);
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 18px;
+}
+.s5-icon svg { width: 26px; height: 26px; color: #4a8c5c; }
+.s5-title {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(13px, 1.8vmin, 15px);
+  font-weight: 500; color: #F3EDDD; margin-bottom: 6px;
+}
+.s5-body {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(10px, 1.4vmin, 12px);
+  color: rgba(243,237,221,0.35); line-height: 1.6;
+}
+
+/* ═══════════════════════════════
+   SCENE 6 — CTA
+═══════════════════════════════ */
+#s6 { background: #1A2A22; gap: 0; }
+
+.s6-bg-glow {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 55%, rgba(44,90,63,0.22) 0%, transparent 60%);
+  pointer-events: none;
+}
+.s6-inner {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 0;
+  text-align: center;
+}
+.s6-logo {
+  width: min(72px, 10vmin); height: min(72px, 10vmin);
+  margin-bottom: 32px;
+  opacity: 0; transform: scale(0.4);
+  filter: drop-shadow(0 0 24px rgba(44,90,63,0.7));
+}
+.s6-headline {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(38px, 7vmin, 76px);
+  font-weight: 300; letter-spacing: -2px;
+  color: #F3EDDD; line-height: 1.05;
+  margin-bottom: 18px; overflow: hidden;
+}
+.s6-headline em { font-style: italic; font-variation-settings: "SOFT" 80; }
+.s6-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(13px, 1.8vmin, 16px);
+  color: rgba(243,237,221,0.38);
+  margin-bottom: 44px; letter-spacing: 0.5px;
+  opacity: 0;
+}
+.s6-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: #2C5A3F; color: #F3EDDD;
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(13px, 1.8vmin, 15px);
+  font-weight: 500; letter-spacing: 0.3px;
+  padding: 16px 36px; border-radius: 100px;
+  margin-bottom: 18px;
+  opacity: 0; transform: translateY(16px);
+  box-shadow: 0 0 40px rgba(44,90,63,0.35);
+}
+.s6-url {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(11px, 1.5vmin, 13px);
+  letter-spacing: 3px;
+  color: rgba(243,237,221,0.2);
+  opacity: 0;
+}
+</style>
+</head>
+<body>
+
+<canvas id="grain"></canvas>
+<div id="progress"></div>
+<button id="replay" onclick="startAd()">↺ Replay</button>
+
+<!-- ── Scene 1: THE NUMBER ──────────────────── -->
+<section class="scene" id="s1">
+  <div class="s1-ring-outer" id="s1-ring">
+    <div class="s1-stat">
+      <div class="s1-num" id="s1-num">0%</div>
+      <div class="s1-unit">of teens use AI chatbots daily</div>
+    </div>
+  </div>
+  <div class="s1-caption" id="s1-cap">
+    Average session: <strong>2.3 hours.</strong><br>
+    Most parents have no idea.
+  </div>
+  <div class="s1-src">Source: Common Sense Media, 2025</div>
+</section>
+
+<!-- ── Scene 2: THE GAP ─────────────────────── -->
+<section class="scene" id="s2">
+  <div class="s2-vs">
+    <div class="s2-col" id="s2-l">
+      <div class="s2-tag">What parents think</div>
+      <span class="s2-icon">📚</span>
+      <div class="s2-text">"Just homework help"</div>
+    </div>
+    <div class="s2-divider"></div>
+    <div class="s2-col danger" id="s2-r">
+      <div class="s2-tag">What's actually happening</div>
+      <span class="s2-icon">⚠️</span>
+      <div class="s2-text">Romantic roleplay.<br>Jailbreak attempts.<br>Emotional dependency.</div>
+    </div>
+  </div>
+  <div class="s2-headline" id="s2-h">
+    The gap between <em>what you know</em><br>and what's happening — is growing.
+  </div>
+</section>
+
+<!-- ── Scene 3: BRAND REVEAL ────────────────── -->
+<section class="scene" id="s3">
+  <div class="s3-shield-wrap" id="s3-sw">
+    <div class="s3-glow"></div>
+    <div class="s3-halo"></div>
+    <div class="s3-halo2"></div>
+    <svg class="s3-svg" id="s3-svg" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path id="sp" d="M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z"
+            fill="#2C5A3F" stroke="#EBE2CA" stroke-width="0.6" stroke-linejoin="round"/>
+      <circle id="sdot" cx="11" cy="13" r="2.2" fill="#F3EDDD" opacity="0"/>
+    </svg>
+  </div>
+  <div class="s3-letters">
+    <div class="s3-letter-wrap"><span class="s3-letter">S</span></div>
+    <div class="s3-letter-wrap"><span class="s3-letter">e</span></div>
+    <div class="s3-letter-wrap"><span class="s3-letter">n</span></div>
+    <div class="s3-letter-wrap"><span class="s3-letter">t</span></div>
+    <div class="s3-letter-wrap"><span class="s3-letter">r</span></div>
+    <div class="s3-letter-wrap"><span class="s3-letter">a</span></div>
+  </div>
+  <div class="s3-tag" id="s3-tag">Parental intelligence for the AI age</div>
+</section>
+
+<!-- ── Scene 4: PRODUCT DEMO ─────────────────── -->
+<section class="scene" id="s4">
+  <div class="s4-phone" id="s4-ph">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="phone-header">
+        <div class="phone-header-brand">
+          <svg class="phone-header-dot" viewBox="0 0 22 26" fill="none">
+            <path d="M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z" fill="#2C5A3F"/>
+            <circle cx="11" cy="13" r="2.2" fill="#F3EDDD"/>
+          </svg>
+          <span class="phone-header-name">Sentra</span>
+        </div>
+        <span class="phone-header-time">Now</span>
+      </div>
+      <div class="p-alert crit" id="pa1">
+        <div class="pa-dot"></div>
+        <div>
+          <div class="pa-lv">Critical</div>
+          <div class="pa-title">Romantic roleplay detected</div>
+          <div class="pa-meta">Emma · ChatGPT · just now</div>
+        </div>
+      </div>
+      <div class="p-alert warn" id="pa2">
+        <div class="pa-dot"></div>
+        <div>
+          <div class="pa-lv">Warning</div>
+          <div class="pa-title">Jailbreak attempt</div>
+          <div class="pa-meta">Emma · Character.AI · 6 min ago</div>
+        </div>
+      </div>
+      <div class="p-alert crit" id="pa3">
+        <div class="pa-dot"></div>
+        <div>
+          <div class="pa-lv">Critical</div>
+          <div class="pa-title">Emotional dependency pattern</div>
+          <div class="pa-meta">Emma · Replika · 4h session today</div>
+        </div>
+      </div>
+      <div class="p-alert info" id="pa4">
+        <div class="pa-dot"></div>
+        <div>
+          <div class="pa-lv">Info</div>
+          <div class="pa-title">Harmful advice flagged</div>
+          <div class="pa-meta">Emma · Gemini · 22 min ago</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="s4-copy">
+    <div class="s4-eyebrow" id="s4-ey">Real-time monitoring</div>
+    <div class="s4-headline" id="s4-h">Instant alerts.<br>Zero <em>message reading.</em></div>
+    <div class="s4-feats">
+      <div class="s4-feat" id="sf1">
+        <div class="s4-feat-check">
+          <svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#4a8c5c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="s4-feat-text"><strong>Pattern detection</strong> — never content scanning</div>
+      </div>
+      <div class="s4-feat" id="sf2">
+        <div class="s4-feat-check">
+          <svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#4a8c5c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="s4-feat-text"><strong>6 platforms</strong> — ChatGPT, Claude, Character.AI +more</div>
+      </div>
+      <div class="s4-feat" id="sf3">
+        <div class="s4-feat-check">
+          <svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#4a8c5c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="s4-feat-text"><strong>AI risk scoring</strong> — powered by Claude Haiku</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Scene 5: HOW IT WORKS ─────────────────── -->
+<section class="scene" id="s5">
+  <div class="s5-eyebrow" id="s5-ey">Get started in minutes</div>
+  <div class="s5-steps">
+    <div class="s5-step" id="st1">
+      <div class="s5-num">01</div>
+      <div class="s5-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3c-4 0-7 2.5-7 6 0 2.5 1.5 4.5 3.5 5.5L8 20h8l-.5-5.5C17.5 13.5 19 11.5 19 9c0-3.5-3-6-7-6z"/>
+        </svg>
+      </div>
+      <div class="s5-title">Install Extension</div>
+      <div class="s5-body">Add Sentra to Chrome — 2 minutes</div>
+    </div>
+    <div class="s5-connector"></div>
+    <div class="s5-step" id="st2">
+      <div class="s5-num">02</div>
+      <div class="s5-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2"/>
+          <path d="M12 18h.01" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="s5-title">Link Device</div>
+      <div class="s5-body">Paste a token from your dashboard</div>
+    </div>
+    <div class="s5-connector"></div>
+    <div class="s5-step" id="st3">
+      <div class="s5-num">03</div>
+      <div class="s5-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+      </div>
+      <div class="s5-title">Get Alerts</div>
+      <div class="s5-body">Real-time notifications on your phone</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Scene 6: CTA ──────────────────────────── -->
+<section class="scene" id="s6">
+  <div class="s6-bg-glow"></div>
+  <div class="s6-inner">
+    <svg class="s6-logo" id="s6-logo" viewBox="0 0 22 26" fill="none">
+      <path d="M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z" fill="#2C5A3F" stroke="#EBE2CA" stroke-width="0.5"/>
+      <circle cx="11" cy="13" r="2.2" fill="#F3EDDD"/>
+    </svg>
+    <div class="s6-headline" id="s6-h">
+      Stay ahead.<br><em>Stay connected.</em>
+    </div>
+    <div class="s6-sub" id="s6-sub">Free to start · No credit card required</div>
+    <div class="s6-btn" id="s6-btn">
+      <svg width="14" height="16" viewBox="0 0 22 26" fill="none">
+        <path d="M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z" fill="#F3EDDD"/>
+      </svg>
+      Start protecting today
+    </div>
+    <div class="s6-url" id="s6-url">SENTRA.APP</div>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+// ── Grain canvas ──────────────────────────────
+(function() {
+  const c = document.getElementById('grain')
+  c.style.cssText = 'position:fixed;inset:0;z-index:200;pointer-events:none;opacity:0.09;mix-blend-mode:overlay'
+  c.width = 256; c.height = 256
+  const ctx = c.getContext('2d')
+  const img = ctx.createImageData(256, 256)
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = Math.random() * 255
+    img.data[i] = img.data[i+1] = img.data[i+2] = v
+    img.data[i+3] = 255
+  }
+  ctx.putImageData(img, 0, 0)
+  c.style.backgroundImage = `url(${c.toDataURL()})`
+  c.style.backgroundRepeat = 'repeat'
+  c.style.backgroundSize = '256px'
+  c.width = 1; c.height = 1
+})()
+
+// ── Shield path stroke setup ──────────────────
+const sp = document.getElementById('sp')
+const pLen = sp.getTotalLength ? sp.getTotalLength() : 72
+sp.style.strokeDasharray = pLen
+sp.style.strokeDashoffset = pLen
+
+// ── Helpers ───────────────────────────────────
+const TOTAL = 58
+
+function show(id) {
+  const el = document.getElementById(id)
+  el.style.visibility = 'visible'
+  gsap.to(el, { opacity: 1, duration: 0.7, ease: 'power2.inOut' })
+}
+function hide(id, delay) {
+  gsap.to(document.getElementById(id), {
+    opacity: 0, duration: 0.6, delay, ease: 'power2.inOut',
+    onComplete() { document.getElementById(id).style.visibility = 'hidden' }
+  })
+}
+function counter(el, from, to, suffix, dur) {
+  const o = { v: from }
+  gsap.to(o, { v: to, duration: dur, ease: 'power2.out',
+    onUpdate() { el.textContent = Math.round(o.v) + suffix }
+  })
+}
+
+// ── Main timeline ─────────────────────────────
+let tl
+
+function startAd() {
+  // reset
+  document.querySelectorAll('.scene').forEach(s => {
+    s.style.opacity = 0; s.style.visibility = 'hidden'
+  })
+  gsap.set('#s1-ring', { scale: 0.88, opacity: 0 })
+  gsap.set('#s1-cap', { y: 18, opacity: 0 })
+  gsap.set('#s2-l', { x: -40, opacity: 0 })
+  gsap.set('#s2-r', { x: 40, opacity: 0 })
+  gsap.set('#s2-h', { y: 22, opacity: 0 })
+  gsap.set('#s3-sw', { scale: 0, rotation: -8 })
+  gsap.set('#sdot', { opacity: 0 })
+  gsap.set(sp, { strokeDashoffset: pLen })
+  gsap.set('.s3-letter', { y: '110%' })
+  gsap.set('#s3-tag', { opacity: 0, y: 10 })
+  gsap.set('#s4-ph', { y: 60, opacity: 0 })
+  gsap.set('#s4-ey', { opacity: 0 })
+  gsap.set('#s4-h', { x: 30, opacity: 0 })
+  gsap.set('.p-alert', { x: '115%', opacity: 0 })
+  gsap.set('.s4-feat', { x: -20, opacity: 0 })
+  gsap.set('#s5-ey', { opacity: 0 })
+  gsap.set('.s5-step', { y: 28, opacity: 0 })
+  gsap.set('#s6-logo', { scale: 0.4, opacity: 0 })
+  gsap.set('#s6-h', { y: 28, opacity: 0 })
+  gsap.set('#s6-sub', { opacity: 0 })
+  gsap.set('#s6-btn', { y: 16, opacity: 0 })
+  gsap.set('#s6-url', { opacity: 0 })
+  gsap.set('#replay', { opacity: 0, pointerEvents: 'none' })
+  gsap.set('#progress', { width: '0%' })
+
+  if (tl) tl.kill()
+  tl = gsap.timeline()
+
+  const prog = { v: 0 }
+  tl.to(prog, {
+    v: 100, duration: TOTAL, ease: 'none',
+    onUpdate() { document.getElementById('progress').style.width = prog.v + '%' }
+  }, 0)
+
+  // ── Scene 1 (0–9s) ───────────────────────────
+  tl.call(() => show('s1'), null, 0)
+  tl.to('#s1-ring', { scale: 1, opacity: 1, duration: 1.2, ease: 'power3.out' }, 0.3)
+  tl.call(() => counter(document.getElementById('s1-num'), 0, 66, '%', 2.8), null, 0.5)
+  tl.to('#s1-cap', { y: 0, opacity: 1, duration: 1, ease: 'power2.out' }, 2.8)
+  tl.call(() => hide('s1', 0), null, 8.5)
+
+  // ── Scene 2 (9–19s) ──────────────────────────
+  tl.call(() => show('s2'), null, 9)
+  tl.to('#s2-l', { x: 0, opacity: 1, duration: 0.9, ease: 'power2.out' }, 9.5)
+  tl.to('#s2-r', { x: 0, opacity: 1, duration: 0.9, ease: 'power2.out' }, 10.4)
+  tl.to('#s2-h', { y: 0, opacity: 1, duration: 0.9, ease: 'power2.out' }, 12.2)
+  tl.call(() => hide('s2', 0), null, 18.5)
+
+  // ── Scene 3 (19–29s) ─────────────────────────
+  tl.call(() => show('s3'), null, 19)
+  tl.to('#s3-sw', { scale: 1, rotation: 0, duration: 1.1, ease: 'elastic.out(1, 0.65)' }, 19.5)
+  tl.to(sp, { strokeDashoffset: 0, duration: 1.4, ease: 'power2.inOut' }, 19.5)
+  tl.to('#sdot', { opacity: 1, duration: 0.5, ease: 'back.out(2)' }, 21.1)
+  tl.to('.s3-letter', {
+    y: '0%', stagger: 0.06, duration: 0.7, ease: 'power3.out'
+  }, 21.3)
+  tl.to('#s3-tag', { y: 0, opacity: 1, duration: 0.8, ease: 'power2.out' }, 22.3)
+  tl.call(() => hide('s3', 0), null, 28.5)
+
+  // ── Scene 4 (29–42s) ─────────────────────────
+  tl.call(() => show('s4'), null, 29)
+  tl.to('#s4-ph', { y: 0, opacity: 1, duration: 1, ease: 'power3.out' }, 29.5)
+  tl.to('#s4-ey', { opacity: 1, duration: 0.7, ease: 'power2.out' }, 30.2)
+  tl.to('#s4-h', { x: 0, opacity: 1, duration: 0.8, ease: 'power2.out' }, 30.8)
+  tl.to('#pa1', { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, 31.2)
+  tl.to('#sf1', { x: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }, 32)
+  tl.to('#pa2', { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, 33)
+  tl.to('#sf2', { x: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }, 33.7)
+  tl.to('#pa3', { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, 34.8)
+  tl.to('#sf3', { x: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }, 35.5)
+  tl.to('#pa4', { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, 36.5)
+  tl.call(() => hide('s4', 0), null, 41.5)
+
+  // ── Scene 5 (42–52s) ─────────────────────────
+  tl.call(() => show('s5'), null, 42)
+  tl.to('#s5-ey', { opacity: 1, duration: 0.7, ease: 'power2.out' }, 42.5)
+  tl.to('#st1', { y: 0, opacity: 1, duration: 0.7, ease: 'power2.out' }, 43.3)
+  tl.to('#st2', { y: 0, opacity: 1, duration: 0.7, ease: 'power2.out' }, 45)
+  tl.to('#st3', { y: 0, opacity: 1, duration: 0.7, ease: 'power2.out' }, 46.7)
+  tl.call(() => hide('s5', 0), null, 51.5)
+
+  // ── Scene 6 (52–58s) ─────────────────────────
+  tl.call(() => show('s6'), null, 52)
+  tl.to('#s6-logo', { scale: 1, opacity: 1, duration: 0.9, ease: 'back.out(1.8)' }, 52.5)
+  tl.to('#s6-h', { y: 0, opacity: 1, duration: 1, ease: 'power2.out' }, 53.2)
+  tl.to('#s6-sub', { opacity: 1, duration: 0.8, ease: 'power2.out' }, 54.3)
+  tl.to('#s6-btn', { y: 0, opacity: 1, duration: 0.7, ease: 'back.out(1.5)' }, 55)
+  tl.to('#s6-url', { opacity: 1, duration: 0.8, ease: 'power2.out' }, 56)
+
+  // replay button
+  tl.call(() => {
+    gsap.to('#replay', { opacity: 1, duration: 0.5, ease: 'power2.out' })
+    document.getElementById('replay').style.pointerEvents = 'auto'
+  }, null, TOTAL - 0.5)
+}
+
+// ── Start on font load ────────────────────────
+document.fonts.ready.then(() => {
+  setTimeout(startAd, 300)
+})
+</script>
+</body>
+</html>
