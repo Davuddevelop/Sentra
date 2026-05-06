@@ -27,28 +27,41 @@ router.get('/purge', verifyCron, async (_req, res) => {
 
 /* ── GET /api/cron/weekly-digest — runs Sunday 08:00 ─────── */
 router.get('/weekly-digest', verifyCron, async (_req, res) => {
-  const families = await db.prepare('SELECT * FROM families').all()
   const now      = new Date()
   const weekEnd   = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const weekStart = new Date(now - 6 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+  // 2 queries replace O(families × children × 3) sequential queries
+  const [families, childRows] = await Promise.all([
+    db.prepare(`
+      SELECT f.id, f.owner_id, u.name as parent_name, u.email as parent_email
+      FROM families f JOIN users u ON u.id = f.owner_id
+    `).all(),
+    db.prepare(`
+      SELECT c.id, c.name, c.family_id,
+        COUNT(DISTINCT s.id) as signals,
+        SUM(CASE WHEN a.level='critical' THEN 1 ELSE 0 END) as critical,
+        SUM(CASE WHEN a.level='warn'     THEN 1 ELSE 0 END) as warn
+      FROM children c
+      LEFT JOIN devices d ON d.child_id = c.id
+      LEFT JOIN signals s ON s.device_id = d.id AND s.created_at > datetime('now', '-7 days')
+      LEFT JOIN alerts  a ON a.child_id  = c.id AND a.created_at > datetime('now', '-7 days')
+      GROUP BY c.id, c.name, c.family_id
+    `).all(),
+  ])
+
+  const statsByFamily = {}
+  for (const r of childRows) {
+    (statsByFamily[r.family_id] ??= []).push({ name: r.name, signals: r.signals ?? 0, critical: r.critical ?? 0, warn: r.warn ?? 0 })
+  }
+
   let sent = 0
-
   for (const family of families) {
-    const parent = await db.prepare('SELECT * FROM users WHERE id = ?').get(family.owner_id)
-    if (!parent) continue
-
-    const children    = await db.prepare('SELECT * FROM children WHERE family_id = ?').all(family.id)
-    const childStats  = await Promise.all(children.map(async child => {
-      const sRow = await db.prepare(`SELECT COUNT(*) as signals FROM signals s JOIN devices d ON d.id=s.device_id WHERE d.child_id=? AND s.created_at > datetime('now','-7 days')`).get(child.id)
-      const cRow = await db.prepare(`SELECT COUNT(*) as critical FROM alerts WHERE child_id=? AND level='critical' AND created_at > datetime('now','-7 days')`).get(child.id)
-      const wRow = await db.prepare(`SELECT COUNT(*) as warn FROM alerts WHERE child_id=? AND level='warn' AND created_at > datetime('now','-7 days')`).get(child.id)
-      return { name: child.name, signals: sRow?.signals ?? 0, critical: cRow?.critical ?? 0, warn: wRow?.warn ?? 0 }
-    }))
-
+    const childStats   = statsByFamily[family.id] ?? []
     const totalSignals = childStats.reduce((s, c) => s + c.signals, 0)
     if (totalSignals === 0) continue
 
-    await sendWeeklyDigest({ parentName: parent.name, parentEmail: parent.email, children: childStats, weekStart, weekEnd })
+    await sendWeeklyDigest({ parentName: family.parent_name, parentEmail: family.parent_email, children: childStats, weekStart, weekEnd })
     sent++
   }
 

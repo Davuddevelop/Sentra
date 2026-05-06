@@ -50,11 +50,21 @@ router.post('/signal', signalLimiter, async (req, res) => {
   const deviceToken = req.headers['x-device-token']
   if (!deviceToken) return res.status(401).json({ error: 'Device token required.' })
 
-  const device = await db.prepare('SELECT * FROM devices WHERE device_token = ?').get(deviceToken)
-  if (!device) return res.status(401).json({ error: 'Unknown device.' })
-
   const { type, payload: rawPayload = {} } = req.body ?? {}
   if (!type) return res.status(400).json({ error: 'Signal type is required.' })
+
+  // Single JOIN replaces 4 sequential queries
+  const row = await db.prepare(`
+    SELECT d.id as device_id, d.name as device_name, d.child_id,
+           c.name as child_name, c.age as child_age, c.family_id,
+           u.name as parent_name, u.email as parent_email, u.push_token
+    FROM devices d
+    JOIN children c ON c.id = d.child_id
+    JOIN families f ON f.id = c.family_id
+    JOIN users    u ON u.id = f.owner_id
+    WHERE d.device_token = ?
+  `).get(deviceToken)
+  if (!row) return res.status(401).json({ error: 'Unknown device.' })
 
   const ALLOWED_KEYS = new Set([
     'app','platform','session_minutes','sessions_today','duration_minutes',
@@ -69,47 +79,45 @@ router.post('/signal', signalLimiter, async (req, res) => {
     Object.entries(rawPayload).filter(([k]) => ALLOWED_KEYS.has(k))
   )
 
-  const child  = await db.prepare('SELECT * FROM children WHERE id = ?').get(device.child_id)
-  const family = await db.prepare('SELECT * FROM families WHERE id = ?').get(child.family_id)
-  const parent = await db.prepare('SELECT * FROM users WHERE id = ?').get(family.owner_id)
+  const ruleScore = Math.min(100, RULE_SCORES[type] ?? 10)
+  const context   = { child_name: row.child_name, child_age: row.child_age, device: row.device_name }
 
-  const context = { child_name: child.name, child_age: child.age, device: device.name }
-  const ai = await analyzeSignal(type, payload, context)
+  // Only call AI for signals that matter — skip zero/low-risk noise
+  const ai = ruleScore >= 20 ? await analyzeSignal(type, payload, context) : null
 
-  const riskScore = ai?.risk_score ?? Math.min(100, RULE_SCORES[type] ?? 10)
+  const riskScore = ai?.risk_score ?? ruleScore
   const level     = ai?.level     ?? ALERT_LEVEL(riskScore)
   const prefix    = type.split('.')[0]
   const category  = CATEGORY[prefix] || 'Activity'
-  const title     = ai?.title ?? payload.title ?? `${category} signal on ${device.name}`
+  const title     = ai?.title ?? payload.title ?? `${category} signal on ${row.device_name}`
   const body      = ai?.body  ?? payload.body  ?? `Signal type: ${type}`
 
-  const { lastInsertRowid: signalId } = await db
-    .prepare('INSERT INTO signals (device_id, type, payload, risk_score) VALUES (?, ?, ?, ?)')
-    .run(device.id, type, JSON.stringify(payload), riskScore)
-
-  await db.prepare('UPDATE devices SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(device.id)
+  // Batch the two writes into one round-trip where possible
+  const [{ lastInsertRowid: signalId }] = await Promise.all([
+    db.prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed) VALUES (?, ?, ?, ?, 1)')
+      .run(row.device_id, type, JSON.stringify(payload), riskScore),
+    db.prepare('UPDATE devices SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(row.device_id),
+  ])
 
   let alertId = null
   if (riskScore >= 20) {
     const { lastInsertRowid } = await db.prepare(`
       INSERT INTO alerts (family_id, child_id, signal_id, level, category, title, body)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(child.family_id, child.id, signalId, level, category, title, body)
+    `).run(row.family_id, row.child_id, signalId, level, category, title, body)
     alertId = lastInsertRowid
 
     if (level === 'warn' || level === 'critical') {
       setImmediate(() => {
-        sendAlertEmail({ parentName: parent.name, parentEmail: parent.email, childName: child.name, alert: { level, title, body } })
-        if (parent.push_token) {
-          sendAlertPush({ pushToken: parent.push_token, childName: child.name, level, title })
+        sendAlertEmail({ parentName: row.parent_name, parentEmail: row.parent_email, childName: row.child_name, alert: { level, title, body } })
+        if (row.push_token) {
+          sendAlertPush({ pushToken: row.push_token, childName: row.child_name, level, title })
         }
       })
     }
   }
 
-  await db.prepare('UPDATE signals SET processed = 1 WHERE id = ?').run(signalId)
-
-  res.json({ ok: true, risk_score: riskScore, level, alert_id: alertId, ai_powered: !!ai, device_name: device.name, child_name: child.name })
+  res.json({ ok: true, risk_score: riskScore, level, alert_id: alertId, ai_powered: !!ai, device_name: row.device_name, child_name: row.child_name })
 })
 
 export default router

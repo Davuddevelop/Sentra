@@ -36,6 +36,7 @@
     "@studio-freight/lenis": "^1.0.42",
     "bcrypt": "^6.0.0",
     "chart.js": "^4.5.1",
+    "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

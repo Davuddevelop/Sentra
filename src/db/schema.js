@@ -12,6 +12,8 @@ export const client = createClient({
 try {
   await client.execute('PRAGMA journal_mode = WAL')
   await client.execute('PRAGMA foreign_keys = ON')
+  await client.execute('PRAGMA cache_size = -20000')  // 20MB page cache
+  await client.execute('PRAGMA synchronous = NORMAL')  // faster writes, safe with WAL
 } catch {}
 
 const TABLES = [
@@ -89,6 +91,9 @@ const TABLES = [
   `CREATE INDEX IF NOT EXISTS idx_devices_token  ON devices(device_token)`,
   `CREATE INDEX IF NOT EXISTS idx_children_family ON children(family_id)`,
   `CREATE INDEX IF NOT EXISTS idx_users_consent  ON users(consent_token) WHERE consent_token IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_families_owner ON families(owner_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_alerts_read    ON alerts(family_id, read) WHERE read = 0`,
+  `CREATE INDEX IF NOT EXISTS idx_signals_created ON signals(created_at DESC)`,
 ]
 
 for (const sql of TABLES) {

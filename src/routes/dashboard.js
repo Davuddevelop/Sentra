@@ -8,16 +8,26 @@ const router = Router()
 
 /* ── GET /api/family ─────────────────────────────────────── */
 router.get('/family', requireAuth, requireFamily, async (req, res) => {
-  const children = await db
-    .prepare('SELECT * FROM children WHERE family_id = ? ORDER BY name')
-    .all(req.family.id)
+  // Single JOIN replaces N+1 (1 + N device queries)
+  const rows = await db.prepare(`
+    SELECT c.id, c.name, c.age, c.avatar, c.created_at,
+           d.id as dev_id, d.name as dev_name, d.platform, d.device_token, d.last_seen
+    FROM children c
+    LEFT JOIN devices d ON d.child_id = c.id
+    WHERE c.family_id = ? ORDER BY c.name, d.id
+  `).all(req.family.id)
 
-  const childrenWithDevices = await Promise.all(children.map(async child => ({
-    ...child,
-    devices: await db.prepare('SELECT * FROM devices WHERE child_id = ?').all(child.id)
-  })))
+  const childMap = new Map()
+  for (const r of rows) {
+    if (!childMap.has(r.id)) {
+      childMap.set(r.id, { id: r.id, name: r.name, age: r.age, avatar: r.avatar, created_at: r.created_at, devices: [] })
+    }
+    if (r.dev_id) {
+      childMap.get(r.id).devices.push({ id: r.dev_id, name: r.dev_name, platform: r.platform, device_token: r.device_token, last_seen: r.last_seen })
+    }
+  }
 
-  res.json({ family: req.family, children: childrenWithDevices })
+  res.json({ family: req.family, children: [...childMap.values()] })
 })
 
 /* ── POST /api/family/child ──────────────────────────────── */
@@ -121,16 +131,40 @@ router.get('/activity', requireAuth, requireFamily, async (req, res) => {
   const levelFilter  = level   ? ' AND a.level = ?'   : ''
   const baseArgs     = [req.family.id, ...(childId ? [childId] : []), ...(level ? [level] : []), cutoff]
 
-  const byDayRaw = await db.prepare(`
-    SELECT date(a.created_at) as date, COUNT(*) as count,
-      SUM(CASE WHEN a.level='critical' THEN 1 ELSE 0 END) as critical,
-      SUM(CASE WHEN a.level='warn'     THEN 1 ELSE 0 END) as warn,
-      SUM(CASE WHEN a.level='info'     THEN 1 ELSE 0 END) as info
-    FROM alerts a
-    WHERE ${familyFilter}${childFilter}${levelFilter}
-      AND a.created_at > ?
-    GROUP BY date(a.created_at) ORDER BY date ASC
-  `).all(...baseArgs)
+  // Run all 4 analytics queries in parallel — they're independent
+  const byLevelArgs = [req.family.id, ...(childId ? [childId] : []), cutoff]
+  const [byDayRaw, byCategory, byLevel, byChild] = await Promise.all([
+    db.prepare(`
+      SELECT date(a.created_at) as date, COUNT(*) as count,
+        SUM(CASE WHEN a.level='critical' THEN 1 ELSE 0 END) as critical,
+        SUM(CASE WHEN a.level='warn'     THEN 1 ELSE 0 END) as warn,
+        SUM(CASE WHEN a.level='info'     THEN 1 ELSE 0 END) as info
+      FROM alerts a
+      WHERE ${familyFilter}${childFilter}${levelFilter}
+        AND a.created_at > ?
+      GROUP BY date(a.created_at) ORDER BY date ASC
+    `).all(...baseArgs),
+    db.prepare(`
+      SELECT category, COUNT(*) as count
+      FROM alerts a WHERE ${familyFilter}${childFilter}${levelFilter}
+        AND a.created_at > ?
+      GROUP BY category ORDER BY count DESC
+    `).all(...baseArgs),
+    db.prepare(`
+      SELECT level, COUNT(*) as count
+      FROM alerts a WHERE ${familyFilter}${childFilter}
+        AND a.created_at > ?
+      GROUP BY level ORDER BY count DESC
+    `).all(...byLevelArgs),
+    db.prepare(`
+      SELECT c.name, c.id, COUNT(a.id) as count,
+        SUM(CASE WHEN a.level='critical' THEN 1 ELSE 0 END) as critical,
+        SUM(CASE WHEN a.level='warn'     THEN 1 ELSE 0 END) as warn
+      FROM alerts a JOIN children c ON c.id = a.child_id
+      WHERE a.family_id = ? AND a.created_at > ?
+      GROUP BY a.child_id ORDER BY count DESC
+    `).all(req.family.id, cutoff),
+  ])
 
   const dayMap = {}
   for (let i = days - 1; i >= 0; i--) {
@@ -141,30 +175,6 @@ router.get('/activity', requireAuth, requireFamily, async (req, res) => {
   byDayRaw.forEach(r => { if (dayMap[r.date]) dayMap[r.date] = r })
   const byDay = Object.values(dayMap)
 
-  const byCategory = await db.prepare(`
-    SELECT category, COUNT(*) as count
-    FROM alerts a WHERE ${familyFilter}${childFilter}${levelFilter}
-      AND a.created_at > ?
-    GROUP BY category ORDER BY count DESC
-  `).all(...baseArgs)
-
-  const byLevelArgs = [req.family.id, ...(childId ? [childId] : []), cutoff]
-  const byLevel = await db.prepare(`
-    SELECT level, COUNT(*) as count
-    FROM alerts a WHERE ${familyFilter}${childFilter}
-      AND a.created_at > ?
-    GROUP BY level ORDER BY count DESC
-  `).all(...byLevelArgs)
-
-  const byChild = await db.prepare(`
-    SELECT c.name, c.id, COUNT(a.id) as count,
-      SUM(CASE WHEN a.level='critical' THEN 1 ELSE 0 END) as critical,
-      SUM(CASE WHEN a.level='warn'     THEN 1 ELSE 0 END) as warn
-    FROM alerts a JOIN children c ON c.id = a.child_id
-    WHERE a.family_id = ? AND a.created_at > ?
-    GROUP BY a.child_id ORDER BY count DESC
-  `).all(req.family.id, cutoff)
-
   res.json({ byDay, byCategory, byLevel, byChild })
 })
 
@@ -174,24 +184,18 @@ router.get('/child/:id', requireAuth, requireFamily, async (req, res) => {
     .get(req.params.id, req.family.id)
   if (!child) return res.status(404).json({ error: 'Child not found.' })
 
-  const devices = await db.prepare('SELECT * FROM devices WHERE child_id = ?').all(child.id)
-  const alerts  = await db.prepare(
-    'SELECT * FROM alerts WHERE child_id = ? ORDER BY created_at DESC LIMIT 20'
-  ).all(child.id)
-
-  const signalRow = await db.prepare(`
-    SELECT COUNT(*) as signals FROM signals s
-    JOIN devices d ON d.id = s.device_id
-    WHERE d.child_id = ? AND s.created_at > datetime('now', '-7 days')
-  `).get(child.id)
-
-  const unreadRow = await db.prepare(
-    'SELECT COUNT(*) as unread FROM alerts WHERE child_id = ? AND read = 0'
-  ).get(child.id)
-
-  const riskRow = await db.prepare(
-    'SELECT MAX(risk_score) as maxRisk FROM signals s JOIN devices d ON d.id=s.device_id WHERE d.child_id = ?'
-  ).get(child.id)
+  // Run all child-detail queries in parallel — they're independent
+  const [devices, alerts, signalRow, unreadRow, riskRow] = await Promise.all([
+    db.prepare('SELECT * FROM devices WHERE child_id = ?').all(child.id),
+    db.prepare('SELECT * FROM alerts WHERE child_id = ? ORDER BY created_at DESC LIMIT 20').all(child.id),
+    db.prepare(`
+      SELECT COUNT(*) as signals FROM signals s
+      JOIN devices d ON d.id = s.device_id
+      WHERE d.child_id = ? AND s.created_at > datetime('now', '-7 days')
+    `).get(child.id),
+    db.prepare('SELECT COUNT(*) as unread FROM alerts WHERE child_id = ? AND read = 0').get(child.id),
+    db.prepare('SELECT MAX(risk_score) as maxRisk FROM signals s JOIN devices d ON d.id=s.device_id WHERE d.child_id = ?').get(child.id),
+  ])
 
   res.json({
     child, devices, alerts,
@@ -268,17 +272,28 @@ router.delete('/account', requireAuth, async (req, res) => {
 
 /* ── GET /api/export ─────────────────────────────────────── */
 router.get('/export', requireAuth, requireFamily, async (req, res) => {
-  const children = await db.prepare('SELECT id, name, age, created_at FROM children WHERE family_id = ?').all(req.family.id)
-
-  const childrenWithData = await Promise.all(children.map(async child => {
-    const devices = await db.prepare('SELECT id, name, platform, last_seen, created_at FROM devices WHERE child_id = ?').all(child.id)
-    const alerts  = await db.prepare('SELECT level, category, title, body, read, created_at FROM alerts WHERE child_id = ? ORDER BY created_at DESC').all(child.id)
-    const signals = await db.prepare(`
-      SELECT s.type, s.payload, s.risk_score, s.created_at
+  // Three bulk queries replace N*3 individual queries
+  const [children, allDevices, allAlerts, allSignals] = await Promise.all([
+    db.prepare('SELECT id, name, age, created_at FROM children WHERE family_id = ?').all(req.family.id),
+    db.prepare('SELECT id, child_id, name, platform, last_seen, created_at FROM devices WHERE child_id IN (SELECT id FROM children WHERE family_id = ?)').all(req.family.id),
+    db.prepare('SELECT child_id, level, category, title, body, read, created_at FROM alerts WHERE family_id = ? ORDER BY created_at DESC LIMIT 500').all(req.family.id),
+    db.prepare(`
+      SELECT d.child_id, s.type, s.payload, s.risk_score, s.created_at
       FROM signals s JOIN devices d ON d.id = s.device_id
-      WHERE d.child_id = ? ORDER BY s.created_at DESC LIMIT 500
-    `).all(child.id)
-    return { ...child, devices, alerts, signals }
+      JOIN children c ON c.id = d.child_id
+      WHERE c.family_id = ? ORDER BY s.created_at DESC LIMIT 500
+    `).all(req.family.id),
+  ])
+
+  const devsByChild = {}; for (const d of allDevices) { (devsByChild[d.child_id] ??= []).push(d) }
+  const alertsByChild = {}; for (const a of allAlerts) { (alertsByChild[a.child_id] ??= []).push(a) }
+  const signalsByChild = {}; for (const s of allSignals) { (signalsByChild[s.child_id] ??= []).push(s) }
+
+  const childrenWithData = children.map(child => ({
+    ...child,
+    devices: devsByChild[child.id] ?? [],
+    alerts:  alertsByChild[child.id] ?? [],
+    signals: signalsByChild[child.id] ?? [],
   }))
 
   const exportData = {

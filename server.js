@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import express from 'express'
+import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import { fileURLToPath } from 'url'
@@ -25,8 +26,9 @@ const ALLOWED_ORIGINS = [
   ...(process.env.APP_URL ? [process.env.APP_URL] : []),
 ]
 
+app.use(compression())
 app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }))
-app.use(express.json())
+app.use(express.json({ limit: '50kb' }))
 app.use(cookieParser())
 
 // ─── Public routes ────────────────────────────────────────
