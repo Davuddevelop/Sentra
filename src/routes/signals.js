@@ -10,7 +10,8 @@ const router = Router()
 const signalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
-  keyGenerator: (req) => req.headers['x-device-token'] || req.ip,
+  keyGenerator: (req) => req.headers['x-device-token'] || req.socket.remoteAddress || 'unknown',
+  skip: (req) => !!req.headers['x-device-token'],
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Signal rate limit exceeded.' },

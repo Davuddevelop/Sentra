@@ -27,7 +27,17 @@ const ALLOWED_ORIGINS = [
 ]
 
 app.use(compression())
-app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }))
+// Chrome extensions send requests from chrome-extension:// origins — allow all for /api/signal
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.startsWith('chrome-extension://')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true,
+}))
 app.use(express.json({ limit: '50kb' }))
 app.use(cookieParser())
 

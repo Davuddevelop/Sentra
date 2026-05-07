@@ -7,8 +7,8 @@
  * close) instead of an in-memory object.
  */
 
-// Update this to your production URL before publishing to the Chrome Store
-const API_BASE = 'https://sentra.vercel.app'
+// DEV: set to 'http://localhost:3001' for local testing, production URL for release
+const API_BASE = 'http://localhost:3001'
 
 // ── Signal queue (persisted in chrome.storage.local) ────────────────────────
 async function enqueueSignal(signal) {

@@ -1,4 +1,5 @@
-const API_BASE = 'https://sentra.vercel.app'
+// DEV: set to 'http://localhost:3001' for local testing, production URL for release
+const API_BASE = 'http://localhost:3001'
 
 // ── Helpers ───────────────────────────────────────────────────
 function showToast(id, msg, type) {

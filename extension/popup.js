@@ -1,4 +1,5 @@
-const API_BASE = 'https://sentra.vercel.app'
+// DEV: set to 'http://localhost:3001' for local testing, production URL for release
+const API_BASE = 'http://localhost:3001'
 
 async function init() {
   const { deviceToken } = await chrome.storage.local.get('deviceToken')

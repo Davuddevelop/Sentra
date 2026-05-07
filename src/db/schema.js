@@ -4,9 +4,11 @@ import { dirname, join } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+const dbUrl = process.env.TURSO_DATABASE_URL || `file:${process.env.DB_PATH ?? join(__dirname, '../../sentra.db')}`
+
 export const client = createClient({
-  url:       process.env.TURSO_DATABASE_URL ?? `file:${process.env.DB_PATH ?? join(__dirname, '../../sentra.db')}`,
-  authToken: process.env.TURSO_AUTH_TOKEN,
+  url:       dbUrl,
+  authToken: process.env.TURSO_AUTH_TOKEN || undefined,
 })
 
 try {
