@@ -54,6 +54,15 @@
       "matches": ["https://copilot.microsoft.com/*", "https://www.bing.com/chat*"],
       "js": ["content/copilot.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://sentra.vercel.app/install/*",
+        "http://localhost:3001/install/*",
+        "http://localhost:5173/install/*"
+      ],
+      "js": ["content-install.js"],
+      "run_at": "document_idle"
     }
   ],
 

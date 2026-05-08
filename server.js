@@ -129,7 +129,7 @@ app.get('/install/:token', async (req, res) => {
     canvas { border-radius: 10px; }
   </style>
 </head>
-<body>
+<body data-device-token="${device_token}">
   <div class="logo"><span class="logo-dot"></span> Sentra</div>
 
   <div class="card">
@@ -156,8 +156,9 @@ app.get('/install/:token', async (req, res) => {
       <div class="step-num">2</div>
       <div class="step-body">
         <div class="step-label">Connect to ${child_name}'s profile</div>
-        <div class="step-desc">After installing, open the extension (click its icon in the toolbar) and paste this token — or scan the QR code.</div>
+        <div class="step-desc">After installing, Sentra will automatically connect to ${child_name}'s profile. No copying needed.</div>
         <div class="token-box" id="token-val">${device_token}</div>
+        <div style="font-size:12px;color:#3C4A42;margin-top:8px">Already have Sentra installed? Copy this token and paste it in the extension settings.</div>
         <div class="qr-wrap">
           <canvas id="qr-canvas"></canvas>
           <button class="btn btn-copy" id="copy-btn">Copy token</button>
