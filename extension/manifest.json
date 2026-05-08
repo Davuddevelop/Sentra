@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Monitors AI chatbot usage patterns on your child's device. Never reads message content — metadata only.",
 
-  "permissions": ["storage", "alarms", "scripting"],
+  "permissions": ["storage", "alarms", "scripting", "tabs"],
   "host_permissions": [
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
@@ -63,6 +63,10 @@
   },
 
   "options_page": "options.html",
+
+  "externally_connectable": {
+    "matches": ["https://sentra.vercel.app/*"]
+  },
 
   "icons": {
     "16":  "icons/icon16.png",

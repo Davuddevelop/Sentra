@@ -867,7 +867,7 @@ $('#add-device-form').addEventListener('submit', async (e) => {
     })
     $('#add-device-modal').style.display = 'none'
     e.target.reset()
-    showTokenModal(device.device_token, device.name, platform)
+    showTokenModal(device.device_token, device.name, platform, device.id)
     loadChildren()
     loadStats()
   } catch (err) {
@@ -908,7 +908,7 @@ const PLATFORM_STEPS = {
   ],
 }
 
-function showTokenModal(token, deviceName, platform = 'browser') {
+function showTokenModal(token, deviceName, platform = 'browser', deviceId = null) {
   $('#token-display').textContent = token
   $('#token-modal').querySelector('.modal-title').textContent = `${deviceName} connected`
 
@@ -928,6 +928,28 @@ function showTokenModal(token, deviceName, platform = 'browser') {
       width: 120, margin: 1,
       color: { dark: '#1A2A22', light: '#FBF7EB' }
     })
+  }
+
+  // Share install link — re-bind onclick each open so deviceId closure is fresh
+  const shareBtn = document.getElementById('share-install-btn')
+  if (shareBtn) {
+    shareBtn.textContent = 'Share install link'
+    shareBtn.disabled = false
+    shareBtn.onclick = async () => {
+      if (!deviceId) return
+      shareBtn.textContent = 'Generating…'
+      shareBtn.disabled = true
+      try {
+        const res = await api('/family/install-link', { method: 'POST', body: { device_id: deviceId } })
+        await navigator.clipboard.writeText(res.url)
+        shareBtn.textContent = 'Link copied to clipboard!'
+        setTimeout(() => { shareBtn.textContent = 'Share install link'; shareBtn.disabled = false }, 3000)
+      } catch (err) {
+        toast(err.message || 'Failed to generate link', 'error')
+        shareBtn.textContent = 'Share install link'
+        shareBtn.disabled = false
+      }
+    }
   }
 }
 

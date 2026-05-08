@@ -194,6 +194,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 })
 
 // ── Install / startup ─────────────────────────────────────────────────────────
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('[sentra] Extension installed — open options to configure device token.')
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })
+  }
 })
