@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { requireAuth, requireFamily } from '../middleware/auth.js'
 import db from '../db/schema.js'
 import { PLAN_LIMITS } from '../config/plans.js'
+import { sendInstallLinkEmail } from '../services/email.js'
 
 const router = Router()
 
@@ -128,6 +129,39 @@ router.post('/family/install-link', requireAuth, requireFamily, async (req, res)
 
   const base = process.env.APP_URL || 'https://sentra.vercel.app'
   res.json({ ok: true, url: `${base}/install/${token}` })
+})
+
+/* ── POST /api/family/send-install-email ─────────────────── */
+router.post('/family/send-install-email', requireAuth, requireFamily, async (req, res) => {
+  const { device_id, email } = req.body ?? {}
+  if (!device_id || !email?.trim()) return res.status(400).json({ error: 'device_id and email are required.' })
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.trim())) return res.status(400).json({ error: 'Invalid email address.' })
+
+  const device = await db.prepare(`
+    SELECT d.id, d.name, d.device_token, c.name as child_name
+    FROM devices d
+    JOIN children c ON c.id = d.child_id
+    WHERE d.id = ? AND c.family_id = ?
+  `).get(device_id, req.family.id)
+  if (!device) return res.status(403).json({ error: 'Device not found.' })
+
+  const token = crypto.randomBytes(24).toString('hex')
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  await db.prepare('INSERT INTO install_tokens (token, device_id, expires_at) VALUES (?, ?, ?)').run(token, device.id, expiresAt)
+
+  const base = process.env.APP_URL || 'https://sentra.vercel.app'
+  const installUrl = `${base}/install/${token}`
+
+  setImmediate(() => sendInstallLinkEmail({
+    parentEmail: email.trim(),
+    childName: device.child_name,
+    deviceName: device.name,
+    installUrl,
+  }))
+
+  res.json({ ok: true })
 })
 
 /* ── GET /api/install/:token ─────────────────────────────── */

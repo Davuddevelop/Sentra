@@ -251,3 +251,40 @@ export async function sendWeeklyDigest({ parentName, parentEmail, children, week
     console.error('[email] weekly digest failed:', err.message)
   }
 }
+
+export async function sendInstallLinkEmail({ parentEmail, childName, deviceName, installUrl }) {
+  try {
+    await getTransporter().sendMail({
+      from: FROM,
+      to: parentEmail,
+      subject: `Sentra — connect ${childName}'s browser`,
+      html: `
+<!DOCTYPE html><html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F3EDDD;font-family:Inter,-apple-system,sans-serif">
+  <div style="max-width:520px;margin:40px auto;padding:0 20px">
+    <div style="margin-bottom:32px;font-family:Georgia,serif;font-size:22px;color:#1A2A22;font-weight:500">◆ Sentra</div>
+    <div style="background:#FBF7EB;border-radius:20px;padding:36px;border:0.5px solid rgba(26,42,34,0.14)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#2C5A3F;font-weight:600;margin-bottom:12px">Device setup</div>
+      <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;color:#1A2A22;margin:0 0 12px;letter-spacing:-0.5px;line-height:1.1">
+        Connect <em>${esc(childName)}</em>'s browser to Sentra.
+      </h1>
+      <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 24px">
+        Open this link on <strong>${esc(childName)}</strong>'s device to install the Sentra extension and connect it to their profile. Takes under 2 minutes.
+      </p>
+      <a href="${installUrl}"
+         style="display:inline-block;background:#1A2A22;color:#F8F4E8;padding:16px 32px;border-radius:100px;text-decoration:none;font-size:15px;font-weight:600">
+        Install Sentra on ${esc(deviceName)} →
+      </a>
+      <p style="font-size:12px;color:#3C4A42;margin-top:20px;line-height:1.6">
+        This link expires in 24 hours.<br>
+        Sentra monitors behavior patterns, never message content. <a href="${process.env.APP_URL || 'https://sentra.vercel.app'}/privacy" style="color:#2C5A3F">Privacy policy</a>
+      </p>
+    </div>
+  </div>
+</body></html>`,
+    })
+  } catch (err) {
+    console.error('[email] install link send failed:', err.message)
+  }
+}
