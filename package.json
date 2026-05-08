@@ -8,7 +8,7 @@
     "dev": "concurrently \"vite\" \"nodemon server.js\"",
     "server": "node server.js",
     "client": "vite",
-    "build": "vite build",
+    "build": "chmod +x node_modules/.bin/vite && vite build",
     "preview": "vite preview",
     "start": "node server.js",
     "gen-icons": "node scripts/gen-icons.mjs"
