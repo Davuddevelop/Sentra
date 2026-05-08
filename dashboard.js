@@ -160,11 +160,28 @@ function showApp() {
 }
 
 $('#resend-consent-btn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('resend-consent-btn')
+  btn.disabled = true
+  btn.textContent = 'Sending…'
   try {
     await api('/auth/resend-consent', { method: 'POST' })
     toast('Confirmation email resent — check your inbox.')
+    let secs = 60
+    btn.textContent = `Resend in ${secs}s`
+    const interval = setInterval(() => {
+      secs--
+      if (secs <= 0) {
+        clearInterval(interval)
+        btn.disabled = false
+        btn.textContent = 'Resend email'
+      } else {
+        btn.textContent = `Resend in ${secs}s`
+      }
+    }, 1000)
   } catch {
     toast('Could not resend email. Try again shortly.', 'error')
+    btn.disabled = false
+    btn.textContent = 'Resend email'
   }
 })
 
@@ -948,6 +965,31 @@ function showTokenModal(token, deviceName, platform = 'browser', deviceId = null
         toast(err.message || 'Failed to generate link', 'error')
         shareBtn.textContent = 'Share install link'
         shareBtn.disabled = false
+      }
+    }
+  }
+
+  // Send install link via email
+  const sendEmailBtn = document.getElementById('send-install-email-btn')
+  const emailInput = document.getElementById('install-email-input')
+  const emailToast = document.getElementById('install-email-toast')
+  if (sendEmailBtn && emailInput) {
+    emailInput.value = ''
+    if (emailToast) emailToast.style.display = 'none'
+    sendEmailBtn.onclick = async () => {
+      const email = emailInput.value.trim()
+      if (!email) return
+      sendEmailBtn.textContent = 'Sending…'
+      sendEmailBtn.disabled = true
+      try {
+        await api('/family/send-install-email', { method: 'POST', body: { device_id: deviceId, email } })
+        if (emailToast) { emailToast.textContent = `Install link sent to ${email}`; emailToast.style.display = 'block' }
+        emailInput.value = ''
+      } catch (err) {
+        if (emailToast) { emailToast.textContent = err.message || 'Failed to send email'; emailToast.style.display = 'block'; emailToast.style.color = 'var(--terra)' }
+      } finally {
+        sendEmailBtn.textContent = 'Send'
+        sendEmailBtn.disabled = false
       }
     }
   }

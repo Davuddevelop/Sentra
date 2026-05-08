@@ -975,6 +975,14 @@
         </div>
         <button id="copy-token-btn" class="modal-submit">Copy token</button>
         <button id="share-install-btn" class="modal-submit" style="background:var(--moss-light);color:var(--moss-deep);margin-top:8px">Share install link</button>
+        <div id="email-install-row" style="margin-top:16px;padding-top:16px;border-top:0.5px solid var(--line-soft)">
+          <div style="font-size:12px;color:var(--ink-soft);margin-bottom:8px">Or send install link by email</div>
+          <div style="display:flex;gap:8px">
+            <input type="email" id="install-email-input" placeholder="Email address" style="flex:1;padding:10px 14px;border-radius:100px;border:0.5px solid var(--line);background:var(--cream);font-size:13px;font-family:inherit;color:var(--ink);outline:none">
+            <button id="send-install-email-btn" class="modal-submit" style="padding:10px 18px;font-size:13px;white-space:nowrap">Send</button>
+          </div>
+          <div id="install-email-toast" style="display:none;font-size:12px;margin-top:8px;color:var(--moss)"></div>
+        </div>
       </div>
       <div style="text-align:center">
         <canvas id="token-qr" style="border-radius:10px;display:block"></canvas>
