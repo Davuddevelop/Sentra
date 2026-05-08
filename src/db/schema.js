@@ -94,6 +94,14 @@ const TABLES = [
   `CREATE INDEX IF NOT EXISTS idx_families_owner ON families(owner_id)`,
   `CREATE INDEX IF NOT EXISTS idx_alerts_read    ON alerts(family_id, read) WHERE read = 0`,
   `CREATE INDEX IF NOT EXISTS idx_signals_created ON signals(created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS install_tokens (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    token      TEXT UNIQUE NOT NULL,
+    device_id  INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_install_tokens ON install_tokens(token, expires_at)`,
 ]
 
 for (const sql of TABLES) {
