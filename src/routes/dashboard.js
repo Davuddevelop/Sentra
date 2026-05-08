@@ -109,6 +109,40 @@ router.post('/family/device', requireAuth, requireFamily, async (req, res) => {
   res.status(201).json({ ok: true, device })
 })
 
+/* ── POST /api/family/install-link ──────────────────────────────────────── */
+router.post('/family/install-link', requireAuth, requireFamily, async (req, res) => {
+  const { device_id } = req.body ?? {}
+  if (!device_id) return res.status(400).json({ error: 'device_id is required.' })
+
+  const device = await db.prepare(`
+    SELECT d.id, d.name, d.device_token, c.name as child_name
+    FROM devices d
+    JOIN children c ON c.id = d.child_id
+    WHERE d.id = ? AND c.family_id = ?
+  `).get(device_id, req.family.id)
+  if (!device) return res.status(403).json({ error: 'Device not found.' })
+
+  const token = crypto.randomBytes(24).toString('hex')
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  await db.prepare('INSERT INTO install_tokens (token, device_id, expires_at) VALUES (?, ?, ?)').run(token, device.id, expiresAt)
+
+  const base = process.env.APP_URL || 'https://sentra.vercel.app'
+  res.json({ ok: true, url: `${base}/install/${token}` })
+})
+
+/* ── GET /api/install/:token ─────────────────────────────── */
+router.get('/install/:token', async (req, res) => {
+  const row = await db.prepare(`
+    SELECT it.token, d.device_token, d.name as device_name, c.name as child_name
+    FROM install_tokens it
+    JOIN devices d ON d.id = it.device_id
+    JOIN children c ON c.id = d.child_id
+    WHERE it.token = ? AND it.expires_at > datetime('now')
+  `).get(req.params.token)
+  if (!row) return res.status(404).json({ error: 'Install link expired or not found.' })
+  res.json({ device_token: row.device_token, device_name: row.device_name, child_name: row.child_name })
+})
+
 /* ── PATCH /api/alerts/:id/read ──────────────────────────── */
 router.patch('/alerts/:id/read', requireAuth, requireFamily, async (req, res) => {
   await db.prepare('UPDATE alerts SET read = 1 WHERE id = ? AND family_id = ?')

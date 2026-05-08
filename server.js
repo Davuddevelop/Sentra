@@ -69,6 +69,123 @@ app.use('/api',         signalRoutes)
 app.use('/api/billing', billingRoutes)
 app.use('/api/cron',    cronRoutes)
 
+// ─── Install landing page ─────────────────────────────────
+app.get('/install/:token', async (req, res) => {
+  const row = await db.prepare(`
+    SELECT it.token, d.device_token, d.name as device_name, c.name as child_name
+    FROM install_tokens it
+    JOIN devices d ON d.id = it.device_id
+    JOIN children c ON c.id = d.child_id
+    WHERE it.token = ? AND it.expires_at > datetime('now')
+  `).get(req.params.token)
+
+  if (!row) {
+    return res.status(410).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Link expired — Sentra</title>
+    <style>body{font-family:Inter,sans-serif;background:#F3EDDD;color:#1A2A22;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+    .box{text-align:center;max-width:400px;padding:40px 20px}h1{font-size:28px;margin-bottom:12px}p{color:#3C4A42;line-height:1.6}</style></head>
+    <body><div class="box"><div style="font-size:48px;margin-bottom:20px">⏱</div>
+    <h1>Link expired</h1><p>This install link is no longer valid. Go back to your Sentra dashboard and generate a new one.</p>
+    <a href="https://sentra.vercel.app/dashboard.html" style="display:inline-block;margin-top:24px;padding:12px 28px;background:#1A2A22;color:#F8F4E8;border-radius:100px;text-decoration:none;font-size:14px">Open Dashboard</a>
+    </div></body></html>`)
+  }
+
+  const { device_token, device_name, child_name } = row
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect ${child_name}'s browser — Sentra</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,300&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --cream: #F3EDDD; --ink: #1A2A22; --ink-soft: #3C4A42;
+      --moss: #2C5A3F; --moss-deep: #1B3A27; --moss-light: #D9E5D1;
+      --terra: #C85A2E; --paper: #FBF7EB; --line: rgba(26,42,34,0.14);
+    }
+    body { font-family: Inter, sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; }
+    .logo { font-family: Fraunces, serif; font-size: 22px; font-weight: 400; color: var(--ink); margin-bottom: 48px; display: flex; align-items: center; gap: 10px; }
+    .logo-dot { width: 8px; height: 8px; background: var(--terra); border-radius: 50%; }
+    .card { background: var(--paper); border-radius: 24px; border: 0.5px solid var(--line); padding: 40px; max-width: 480px; width: 100%; }
+    .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 2.5px; color: var(--ink-soft); margin-bottom: 12px; }
+    h1 { font-family: Fraunces, serif; font-style: italic; font-weight: 300; font-size: clamp(26px, 4vw, 34px); line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 24px; }
+    .divider { border: none; border-top: 0.5px solid var(--line); margin: 28px 0; }
+    .step { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 24px; }
+    .step:last-child { margin-bottom: 0; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--moss-light); color: var(--moss-deep); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .step-body { flex: 1; }
+    .step-label { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+    .step-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.55; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 100px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; border: none; transition: background 0.2s; }
+    .btn-primary { background: var(--ink); color: var(--cream); }
+    .btn-primary:hover { background: var(--moss-deep); }
+    .btn-copy { background: var(--moss-light); color: var(--moss-deep); margin-top: 12px; font-size: 13px; padding: 10px 20px; }
+    .btn-copy:hover { background: #c8d9c0; }
+    .token-box { background: var(--cream); border-radius: 12px; border: 0.5px solid var(--line); padding: 14px 16px; font-family: monospace; font-size: 12px; word-break: break-all; color: var(--ink); letter-spacing: 0.5px; margin-top: 12px; user-select: all; }
+    .qr-wrap { margin-top: 16px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .expiry { font-size: 12px; color: var(--ink-soft); margin-top: 20px; padding-top: 16px; border-top: 0.5px solid var(--line); }
+    canvas { border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <div class="logo"><span class="logo-dot"></span> Sentra</div>
+
+  <div class="card">
+    <div class="eyebrow">Device Setup</div>
+    <h1>Connect <em>${child_name}</em>'s browser to Sentra</h1>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-label">Install the Sentra extension</div>
+        <div class="step-desc">Click below to add Sentra to Chrome on this device. It takes under a minute.</div>
+        <div style="margin-top:14px">
+          <a class="btn btn-primary" href="https://chrome.google.com/webstore/detail/sentra-child-safety-monitor" target="_blank" id="install-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Add to Chrome
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-label">Connect to ${child_name}'s profile</div>
+        <div class="step-desc">After installing, open the extension (click its icon in the toolbar) and paste this token — or scan the QR code.</div>
+        <div class="token-box" id="token-val">${device_token}</div>
+        <div class="qr-wrap">
+          <canvas id="qr-canvas"></canvas>
+          <button class="btn btn-copy" id="copy-btn">Copy token</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="expiry">⏱ This link expires in 24 hours. Device: <strong>${device_name}</strong></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script>
+    QRCode.toCanvas(document.getElementById('qr-canvas'), 'sentra-token:${device_token}', {
+      width: 100, margin: 1,
+      color: { dark: '#1A2A22', light: '#FBF7EB' }
+    })
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText('${device_token}').then(() => {
+        const btn = document.getElementById('copy-btn')
+        btn.textContent = 'Copied!'
+        setTimeout(() => { btn.textContent = 'Copy token' }, 2500)
+      })
+    })
+  </script>
+</body>
+</html>`)
+})
+
 // ─── Static frontend (local dev / Railway) ───────────────
 app.use(express.static(join(__dirname, 'public')))
 app.use(express.static(join(__dirname, 'dist')))
