@@ -169,6 +169,15 @@ async function handleMessage(msg, tabId) {
       })
       break
     }
+
+    case 'SAVE_DEVICE_TOKEN': {
+      if (msg.token) {
+        await chrome.storage.local.set({ deviceToken: msg.token })
+        // Open the options page so the parent/child sees confirmation
+        chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })
+      }
+      break
+    }
   }
 }
 

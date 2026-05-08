@@ -1,6 +1,4 @@
-import nodemailer from 'nodemailer'
-
-let transporter = null
+const FROM = process.env.EMAIL_FROM || 'Sentra <alerts@sentra.app>'
 
 function esc(str) {
   return String(str ?? '')
@@ -11,25 +9,26 @@ function esc(str) {
     .replace(/'/g, '&#x27;')
 }
 
-function getTransporter() {
-  if (transporter) return transporter
-
-  if (process.env.SMTP_HOST && !process.env.SMTP_HOST.includes('ethereal')) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    })
-  } else {
-    // Dev: log to console instead of sending
-    transporter = { sendMail: async (opts) => { console.log('[EMAIL]', opts.subject, '→', opts.to); return {} } }
+async function sendEmail({ from, to, subject, html }) {
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[EMAIL]', subject, '→', to)
+    return
   }
 
-  return transporter
-}
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + process.env.RESEND_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ from, to, subject, html }),
+  })
 
-const FROM = process.env.EMAIL_FROM || 'Sentra <alerts@sentra.app>'
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Resend API error ${res.status}: ${text}`)
+  }
+}
 
 function alertEmail({ parentName, parentEmail, childName, alert }) {
   const levelColor = { critical: '#C85A2E', warn: '#D97706', info: '#2C5A3F', ok: '#2C5A3F' }
@@ -113,63 +112,6 @@ function welcomeEmail({ name, email }) {
   }
 }
 
-export async function sendAlertEmail({ parentName, parentEmail, childName, alert }) {
-  try {
-    await getTransporter().sendMail(alertEmail({ parentName, parentEmail, childName, alert }))
-  } catch (err) {
-    console.error('[email] alert send failed:', err.message)
-  }
-}
-
-export async function sendConsentEmail({ name, email, consentToken }) {
-  const appUrl  = process.env.APP_URL || 'http://localhost:3001'
-  const verifyUrl = `${appUrl}/api/auth/verify-consent?token=${consentToken}`
-  try {
-    await getTransporter().sendMail({
-      from: FROM, to: email,
-      subject: 'Sentra — confirm your parental consent',
-      html: `
-<!DOCTYPE html><html>
-<body style="margin:0;padding:0;background:#F3EDDD;font-family:Inter,-apple-system,sans-serif">
-  <div style="max-width:520px;margin:40px auto;padding:0 20px">
-    <div style="margin-bottom:32px;font-family:Georgia,serif;font-size:22px;color:#1A2A22;font-weight:500">◆ Sentra</div>
-    <div style="background:#FBF7EB;border-radius:20px;padding:36px;border:0.5px solid rgba(26,42,34,0.14)">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#C85A2E;font-weight:600;margin-bottom:12px">Action required</div>
-      <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;color:#1A2A22;margin:0 0 12px;letter-spacing:-0.5px">
-        Confirm your parental consent.
-      </h1>
-      <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 8px">
-        Hi ${esc(name)}, you've created a Sentra account to monitor your child's AI chatbot activity.
-      </p>
-      <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 24px">
-        To comply with COPPA and activate monitoring, please confirm you are the parent or legal guardian of the children you will monitor.
-      </p>
-      <a href="${verifyUrl}"
-         style="display:inline-block;background:#2C5A3F;color:#F8F4E8;padding:16px 32px;border-radius:100px;text-decoration:none;font-size:15px;font-weight:600">
-        Confirm parental consent →
-      </a>
-      <p style="font-size:12px;color:#3C4A42;margin-top:20px;line-height:1.6">
-        This link expires in 48 hours. If you did not create this account, you can safely ignore this email.<br><br>
-        Sentra monitors behavioral metadata only — we never read message content.<br>
-        <a href="${appUrl}/privacy" style="color:#2C5A3F">Privacy policy</a>
-      </p>
-    </div>
-  </div>
-</body></html>`,
-    })
-  } catch (err) {
-    console.error('[email] consent send failed:', err.message)
-  }
-}
-
-export async function sendWelcomeEmail({ name, email }) {
-  try {
-    await getTransporter().sendMail(welcomeEmail({ name, email }))
-  } catch (err) {
-    console.error('[email] welcome send failed:', err.message)
-  }
-}
-
 function weeklyDigestEmail({ parentName, parentEmail, children, weekStart, weekEnd }) {
   const totalSignals  = children.reduce((s, c) => s + c.signals, 0)
   const totalCritical = children.reduce((s, c) => s + c.critical, 0)
@@ -244,9 +186,66 @@ function weeklyDigestEmail({ parentName, parentEmail, children, weekStart, weekE
   }
 }
 
+export async function sendAlertEmail({ parentName, parentEmail, childName, alert }) {
+  try {
+    await sendEmail(alertEmail({ parentName, parentEmail, childName, alert }))
+  } catch (err) {
+    console.error('[email] alert send failed:', err.message)
+  }
+}
+
+export async function sendConsentEmail({ name, email, consentToken }) {
+  const appUrl  = process.env.APP_URL || 'http://localhost:3001'
+  const verifyUrl = `${appUrl}/api/auth/verify-consent?token=${consentToken}`
+  try {
+    await sendEmail({
+      from: FROM, to: email,
+      subject: 'Sentra — confirm your parental consent',
+      html: `
+<!DOCTYPE html><html>
+<body style="margin:0;padding:0;background:#F3EDDD;font-family:Inter,-apple-system,sans-serif">
+  <div style="max-width:520px;margin:40px auto;padding:0 20px">
+    <div style="margin-bottom:32px;font-family:Georgia,serif;font-size:22px;color:#1A2A22;font-weight:500">◆ Sentra</div>
+    <div style="background:#FBF7EB;border-radius:20px;padding:36px;border:0.5px solid rgba(26,42,34,0.14)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#C85A2E;font-weight:600;margin-bottom:12px">Action required</div>
+      <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;color:#1A2A22;margin:0 0 12px;letter-spacing:-0.5px">
+        Confirm your parental consent.
+      </h1>
+      <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 8px">
+        Hi ${esc(name)}, you've created a Sentra account to monitor your child's AI chatbot activity.
+      </p>
+      <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 24px">
+        To comply with COPPA and activate monitoring, please confirm you are the parent or legal guardian of the children you will monitor.
+      </p>
+      <a href="${verifyUrl}"
+         style="display:inline-block;background:#2C5A3F;color:#F8F4E8;padding:16px 32px;border-radius:100px;text-decoration:none;font-size:15px;font-weight:600">
+        Confirm parental consent →
+      </a>
+      <p style="font-size:12px;color:#3C4A42;margin-top:20px;line-height:1.6">
+        This link expires in 48 hours. If you did not create this account, you can safely ignore this email.<br><br>
+        Sentra monitors behavioral metadata only — we never read message content.<br>
+        <a href="${appUrl}/privacy" style="color:#2C5A3F">Privacy policy</a>
+      </p>
+    </div>
+  </div>
+</body></html>`,
+    })
+  } catch (err) {
+    console.error('[email] consent send failed:', err.message)
+  }
+}
+
+export async function sendWelcomeEmail({ name, email }) {
+  try {
+    await sendEmail(welcomeEmail({ name, email }))
+  } catch (err) {
+    console.error('[email] welcome send failed:', err.message)
+  }
+}
+
 export async function sendWeeklyDigest({ parentName, parentEmail, children, weekStart, weekEnd }) {
   try {
-    await getTransporter().sendMail(weeklyDigestEmail({ parentName, parentEmail, children, weekStart, weekEnd }))
+    await sendEmail(weeklyDigestEmail({ parentName, parentEmail, children, weekStart, weekEnd }))
   } catch (err) {
     console.error('[email] weekly digest failed:', err.message)
   }
@@ -254,7 +253,7 @@ export async function sendWeeklyDigest({ parentName, parentEmail, children, week
 
 export async function sendInstallLinkEmail({ parentEmail, childName, deviceName, installUrl }) {
   try {
-    await getTransporter().sendMail({
+    await sendEmail({
       from: FROM,
       to: parentEmail,
       subject: `Sentra — connect ${childName}'s browser`,
