@@ -57,7 +57,7 @@
     },
     {
       "matches": [
-        "https://sentra.vercel.app/install/*",
+        "https://sentra-peach-delta.vercel.app/install/*",
         "http://localhost:3001/install/*",
         "http://localhost:5173/install/*"
       ],
@@ -74,7 +74,7 @@
   "options_page": "options.html",
 
   "externally_connectable": {
-    "matches": ["https://sentra.vercel.app/*"]
+    "matches": ["https://sentra-peach-delta.vercel.app/*"]
   },
 
   "icons": {

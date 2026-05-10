@@ -127,7 +127,7 @@ router.post('/family/install-link', requireAuth, requireFamily, async (req, res)
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
   await db.prepare('INSERT INTO install_tokens (token, device_id, expires_at) VALUES (?, ?, ?)').run(token, device.id, expiresAt)
 
-  const base = process.env.APP_URL || 'https://sentra.vercel.app'
+  const base = process.env.APP_URL || 'https://sentra-peach-delta.vercel.app'
   res.json({ ok: true, url: `${base}/install/${token}` })
 })
 
@@ -151,7 +151,7 @@ router.post('/family/send-install-email', requireAuth, requireFamily, async (req
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
   await db.prepare('INSERT INTO install_tokens (token, device_id, expires_at) VALUES (?, ?, ?)').run(token, device.id, expiresAt)
 
-  const base = process.env.APP_URL || 'https://sentra.vercel.app'
+  const base = process.env.APP_URL || 'https://sentra-peach-delta.vercel.app'
   const installUrl = `${base}/install/${token}`
 
   setImmediate(() => sendInstallLinkEmail({

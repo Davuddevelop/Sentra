@@ -8,7 +8,7 @@
  */
 
 // Update this to your production URL before publishing to the Chrome Store
-const API_BASE = 'https://sentra.vercel.app'
+const API_BASE = 'https://sentra-peach-delta.vercel.app'
 
 // ── Signal queue (persisted in chrome.storage.local) ────────────────────────
 async function enqueueSignal(signal) {

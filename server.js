@@ -85,7 +85,7 @@ app.get('/install/:token', async (req, res) => {
     .box{text-align:center;max-width:400px;padding:40px 20px}h1{font-size:28px;margin-bottom:12px}p{color:#3C4A42;line-height:1.6}</style></head>
     <body><div class="box"><div style="font-size:48px;margin-bottom:20px">⏱</div>
     <h1>Link expired</h1><p>This install link is no longer valid. Go back to your Sentra dashboard and generate a new one.</p>
-    <a href="https://sentra.vercel.app/dashboard.html" style="display:inline-block;margin-top:24px;padding:12px 28px;background:#1A2A22;color:#F8F4E8;border-radius:100px;text-decoration:none;font-size:14px">Open Dashboard</a>
+    <a href="https://sentra-peach-delta.vercel.app/dashboard.html" style="display:inline-block;margin-top:24px;padding:12px 28px;background:#1A2A22;color:#F8F4E8;border-radius:100px;text-decoration:none;font-size:14px">Open Dashboard</a>
     </div></body></html>`)
   }
 

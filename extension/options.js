@@ -1,4 +1,4 @@
-const API_BASE = 'https://sentra.vercel.app'
+const API_BASE = 'https://sentra-peach-delta.vercel.app'
 
 // ── Helpers ───────────────────────────────────────────────────
 function showToast(id, msg, type) {

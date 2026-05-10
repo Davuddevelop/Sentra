@@ -277,7 +277,7 @@ export async function sendInstallLinkEmail({ parentEmail, childName, deviceName,
       </a>
       <p style="font-size:12px;color:#3C4A42;margin-top:20px;line-height:1.6">
         This link expires in 24 hours.<br>
-        Sentra monitors behavior patterns, never message content. <a href="${process.env.APP_URL || 'https://sentra.vercel.app'}/privacy" style="color:#2C5A3F">Privacy policy</a>
+        Sentra monitors behavior patterns, never message content. <a href="${process.env.APP_URL || 'https://sentra-peach-delta.vercel.app'}/privacy" style="color:#2C5A3F">Privacy policy</a>
       </p>
     </div>
   </div>
