@@ -1,4 +1,4 @@
-const API_BASE = 'https://sentra.vercel.app'
+const API_BASE = 'https://sentra-peach-delta.vercel.app'
 
 async function init() {
   const { deviceToken } = await chrome.storage.local.get('deviceToken')
