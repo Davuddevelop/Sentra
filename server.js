@@ -160,7 +160,7 @@ app.get('/install/:token', async (req, res) => {
         <div class="token-box" id="token-val">${device_token}</div>
         <div style="font-size:12px;color:#3C4A42;margin-top:8px">Already have Sentra installed? Copy this token and paste it in the extension settings.</div>
         <div class="qr-wrap">
-          <canvas id="qr-canvas"></canvas>
+          <img id="qr-img" style="border-radius:10px;width:100px;height:100px" alt="QR code">
           <button class="btn btn-copy" id="copy-btn">Copy token</button>
         </div>
       </div>
@@ -171,10 +171,20 @@ app.get('/install/:token', async (req, res) => {
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script>
-    QRCode.toCanvas(document.getElementById('qr-canvas'), 'sentra-token:${device_token}', {
+    QRCode.toDataURL('sentra-token:${device_token}', {
       width: 100, margin: 1,
       color: { dark: '#1A2A22', light: '#FBF7EB' }
+    }, function(err, url) {
+      if (!err) {
+        document.getElementById('qr-img').src = url
+      } else {
+        // fallback: external QR API
+        document.getElementById('qr-img').src =
+          'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' +
+          encodeURIComponent('sentra-token:${device_token}')
+      }
     })
+
     document.getElementById('copy-btn').addEventListener('click', () => {
       navigator.clipboard.writeText('${device_token}').then(() => {
         const btn = document.getElementById('copy-btn')
