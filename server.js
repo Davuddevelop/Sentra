@@ -28,6 +28,8 @@ const ALLOWED_ORIGINS = [
 
 app.use(compression())
 app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }))
+// Must be before express.json() — Stripe needs raw body for signature verification
+app.use('/api/billing/webhook', express.raw({ type: 'application/json' }))
 app.use(express.json({ limit: '50kb' }))
 app.use(cookieParser())
 

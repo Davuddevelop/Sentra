@@ -3,7 +3,7 @@ import * as Device from 'expo-device'
 import { Platform } from 'react-native'
 import { getToken } from './api'
 
-const API_BASE = 'http://localhost:3001'
+const API_BASE = 'https://sentra-peach-delta.vercel.app'
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

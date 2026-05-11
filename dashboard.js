@@ -939,11 +939,18 @@ function showTokenModal(token, deviceName, platform = 'browser', deviceId = null
 
   $('#token-modal').style.display = 'flex'
 
-  const canvas = document.getElementById('token-qr')
-  if (canvas && window.QRCode) {
-    QRCode.toCanvas(canvas, `sentra-token:${token}`, {
+  const qrImg = document.getElementById('token-qr')
+  if (qrImg && window.QRCode) {
+    QRCode.toDataURL(`sentra-token:${token}`, {
       width: 120, margin: 1,
       color: { dark: '#1A2A22', light: '#FBF7EB' }
+    }, function(err, url) {
+      if (!err) {
+        qrImg.src = url
+      } else {
+        qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' +
+          encodeURIComponent('sentra-token:' + token)
+      }
     })
   }
 
