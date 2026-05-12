@@ -87,6 +87,7 @@
 
   window.addEventListener('beforeunload', () => {
     clearInterval(retryInterval)
+    observer.disconnect()
     chrome.runtime.sendMessage({ type: 'SESSION_END', app: APP })
   })
 })()
