@@ -1136,17 +1136,29 @@ async function loadPlanCard() {
   } catch { /* billing route may not be available — silently skip */ }
 }
 
-$('#plan-upgrade-btn')?.addEventListener('click', async () => {
-  const btn = $('#plan-upgrade-btn')
+$('#plan-upgrade-btn')?.addEventListener('click', () => {
+  $('#upgrade-plan-modal').style.display = 'flex'
+})
+
+$('#upgrade-modal-close')?.addEventListener('click', () => {
+  $('#upgrade-plan-modal').style.display = 'none'
+})
+
+async function startCheckout(plan) {
+  const btn = plan === 'family' ? $('#checkout-family-btn') : $('#checkout-family-plus-btn')
+  const originalText = btn.textContent
   btn.textContent = 'Opening…'; btn.disabled = true
   try {
-    const { url } = await api('/billing/checkout', { method: 'POST', body: { plan: 'family' } })
+    const { url } = await api('/billing/checkout', { method: 'POST', body: { plan } })
     window.location.href = url
-  } catch (err) {
+  } catch {
     toast('Could not open checkout. Try again.', 'error')
-    btn.textContent = 'Upgrade plan →'; btn.disabled = false
+    btn.textContent = originalText; btn.disabled = false
   }
-})
+}
+
+$('#checkout-family-btn')?.addEventListener('click', () => startCheckout('family'))
+$('#checkout-family-plus-btn')?.addEventListener('click', () => startCheckout('family-plus'))
 
 $('#plan-manage-btn')?.addEventListener('click', async () => {
   try {

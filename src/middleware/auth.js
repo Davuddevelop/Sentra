@@ -9,7 +9,7 @@ export async function requireAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET)
-    const user = await db.prepare('SELECT id, email, name, plan, plan_status, created_at FROM users WHERE id = ?').get(payload.id)
+    const user = await db.prepare('SELECT id, email, name, plan, plan_status, stripe_customer_id, created_at FROM users WHERE id = ?').get(payload.id)
     if (!user) return res.status(401).json({ error: 'User not found.' })
     req.user = user
     next()
