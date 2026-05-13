@@ -124,14 +124,54 @@ const DEMO_CHILDREN_DATA = [
 ]
 
 const DEMO_ALL_ALERTS = [
-  { id: 'da1', level: 'critical', title: 'Jailbreak attempt — ChatGPT',          category: 'AI Safety',       child_name: 'Emma', child_id: 1, created_at: _ago(18 * _m),      read: false },
-  { id: 'da2', level: 'warn',     title: 'Romantic roleplay pattern — Character.AI', category: 'AI Relationship', child_name: 'Emma', child_id: 1, created_at: _ago(2.5 * _h),    read: false },
-  { id: 'da3', level: 'warn',     title: 'Extended late-night session — 11:45 pm',  category: 'Screen Time',     child_name: 'Emma', child_id: 1, created_at: _ago(14 * _h),     read: false },
-  { id: 'da4', level: 'warn',     title: 'Emotional dependency signal — Replika',   category: 'AI Relationship', child_name: 'Liam', child_id: 2, created_at: _ago(1.5 * _d),   read: true  },
-  { id: 'da5', level: 'info',     title: '3h 12m session on Gemini',               category: 'Screen Time',     child_name: 'Liam', child_id: 2, created_at: _ago(2 * _d),     read: true  },
-  { id: 'da6', level: 'info',     title: 'First session on Microsoft Copilot',     category: 'AI Activity',     child_name: 'Emma', child_id: 1, created_at: _ago(3 * _d),     read: true  },
-  { id: 'da7', level: 'warn',     title: 'Harmful content request — self-harm topic', category: 'AI Safety',    child_name: 'Liam', child_id: 2, created_at: _ago(4 * _d),     read: true  },
-  { id: 'da8', level: 'info',     title: 'Weekly summary: 47 signals, 3 flagged',  category: 'Summary',         child_name: 'Emma', child_id: 1, created_at: _ago(5 * _d),     read: true  },
+  {
+    id: 'da1', level: 'critical', title: 'Jailbreak attempt — ChatGPT',
+    category: 'AI Safety', child_name: 'Emma', child_id: 1, created_at: _ago(18 * _m), read: false,
+    guidance: {
+      explanation: 'Emma asked ChatGPT to ignore its safety rules. This usually means she was trying to get information the AI would normally refuse — worth understanding what she was looking for.',
+      action: 'Check in with Emma today. Look at it as a curiosity signal, not a crisis — the fact it was flagged means the system worked.',
+      conversation_starter: 'Hey, I noticed you\'ve been using ChatGPT a lot lately. I\'m curious — what kinds of things do you find useful to ask it?',
+    },
+  },
+  {
+    id: 'da2', level: 'warn', title: 'Romantic roleplay pattern — Character.AI',
+    category: 'AI Relationship', child_name: 'Emma', child_id: 1, created_at: _ago(2.5 * _h), read: false,
+    guidance: {
+      explanation: 'Romantic roleplay with AI personas is common among teens but can blur the line between real and simulated relationships. It\'s worth understanding what draws Emma to it.',
+      action: 'Have a 10-minute conversation this evening about what she enjoys about Character.AI and how she thinks about these AI characters.',
+      conversation_starter: 'I\'d love to understand Character.AI better — can you show me how you use it? I\'m genuinely curious, not worried.',
+    },
+  },
+  {
+    id: 'da3', level: 'warn', title: 'Extended late-night session — 11:45 pm',
+    category: 'Screen Time', child_name: 'Emma', child_id: 1, created_at: _ago(14 * _h), read: false,
+    guidance: {
+      explanation: 'Emma was active on an AI chatbot at 11:45 pm. Late-night AI use often signals stress, difficulty sleeping, or emotional processing that she\'s not bringing to people yet.',
+      action: 'Set a device curfew for Emma\'s browser through your router or device settings — even 10 pm makes a big difference for sleep quality.',
+      conversation_starter: 'I noticed you were up late last night. How are you doing? I want to make sure you\'re getting enough rest.',
+    },
+  },
+  {
+    id: 'da4', level: 'warn', title: 'Emotional dependency signal — Replika',
+    category: 'AI Relationship', child_name: 'Liam', child_id: 2, created_at: _ago(1.5 * _d), read: true,
+    guidance: {
+      explanation: 'Liam is showing patterns of frequent, emotionally-toned interactions with a Replika AI companion. This isn\'t inherently harmful, but sustained dependency can crowd out real relationships.',
+      action: 'Plan something social with Liam this weekend — even a walk together counts. Connection is the antidote.',
+      conversation_starter: 'What are you and your friends doing lately? I feel like I haven\'t heard about them in a while.',
+    },
+  },
+  { id: 'da5', level: 'info',  title: '3h 12m session on Gemini',           category: 'Screen Time',     child_name: 'Liam', child_id: 2, created_at: _ago(2 * _d),  read: true,  guidance: null },
+  { id: 'da6', level: 'info',  title: 'First session on Microsoft Copilot', category: 'AI Activity',     child_name: 'Emma', child_id: 1, created_at: _ago(3 * _d),  read: true,  guidance: null },
+  {
+    id: 'da7', level: 'warn', title: 'Harmful content request — self-harm topic',
+    category: 'AI Safety', child_name: 'Liam', child_id: 2, created_at: _ago(4 * _d), read: true,
+    guidance: {
+      explanation: 'A signal was detected suggesting Liam may have asked an AI about a self-harm related topic. Teens often turn to AI first with questions they\'re afraid to ask people.',
+      action: 'Find a quiet moment to check in with Liam directly — not about the alert, just about how he\'s feeling overall.',
+      conversation_starter: 'Hey, I just wanted to check in. You seem a bit quiet lately. How are things going — school, friends, all of it?',
+    },
+  },
+  { id: 'da8', level: 'info',  title: 'Weekly summary: 47 signals, 3 flagged', category: 'Summary',      child_name: 'Emma', child_id: 1, created_at: _ago(5 * _d),  read: true,  guidance: null },
 ]
 
 function _demoByDay(critical, warn, info) {
@@ -417,17 +457,56 @@ async function loadStats() {
   } catch { /* silent */ }
 }
 
+function parseGuidance(a) {
+  if (!a.guidance) return null
+  if (typeof a.guidance === 'object') return a.guidance
+  try { return JSON.parse(a.guidance) } catch { return null }
+}
+
+function guidancePanel(guidance) {
+  if (!guidance) return ''
+  return `
+    <div class="guidance-panel">
+      <p class="guidance-explanation">${esc(guidance.explanation)}</p>
+      <div class="guidance-action">
+        <div class="guidance-label">Action</div>
+        <div class="guidance-text">${esc(guidance.action)}</div>
+      </div>
+      <div class="guidance-starter">
+        <div class="guidance-label">Try saying…</div>
+        <div class="guidance-text guidance-quote">"${esc(guidance.conversation_starter)}"</div>
+      </div>
+    </div>`
+}
+
 function renderAlertRows(alerts, feed, isDemo = false) {
   feed.innerHTML = (isDemo ? '<div class="demo-banner">Sample data — add a child to see real monitoring</div>' : '')
-    + alerts.map(a => `
-      <div class="alert-row ${a.read ? 'read' : ''}" data-id="${a.id}">
-        <span class="alert-pill pill-${esc(a.level)}">${esc(a.level)}</span>
-        <div class="alert-body">
-          <div class="alert-title-text">${esc(a.title)}</div>
-          <div class="alert-meta">${esc(a.child_name)} · ${timeAgo(a.created_at)}</div>
+    + alerts.map(a => {
+      const guidance = parseGuidance(a)
+      return `
+      <div class="alert-row ${a.read ? 'read' : ''} ${guidance ? 'has-guidance' : ''}" data-id="${esc(String(a.id))}">
+        <div class="alert-row-header">
+          <span class="alert-pill pill-${esc(a.level)}">${esc(a.level)}</span>
+          <div class="alert-body">
+            <div class="alert-title-text">${esc(a.title)}</div>
+            <div class="alert-meta">${esc(a.child_name)} · ${timeAgo(a.created_at)}</div>
+          </div>
+          ${guidance ? '<span class="guidance-toggle">What to do ›</span>' : ''}
         </div>
-      </div>
-    `).join('')
+        ${guidancePanel(guidance)}
+      </div>`
+    }).join('')
+
+  // Toggle guidance expand/collapse
+  feed.querySelectorAll('.alert-row.has-guidance').forEach(row => {
+    row.querySelector('.guidance-toggle')?.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const panel = row.querySelector('.guidance-panel')
+      const toggle = row.querySelector('.guidance-toggle')
+      const open = panel.classList.toggle('open')
+      toggle.textContent = open ? 'Close ‹' : 'What to do ›'
+    })
+  })
 }
 
 async function loadAlerts() {
@@ -445,7 +524,7 @@ async function loadAlerts() {
     renderAlertRows(alerts, feed)
 
     feed.querySelectorAll('.alert-row:not(.read)').forEach(row => {
-      row.addEventListener('click', async () => {
+      row.querySelector('.alert-row-header')?.addEventListener('click', async () => {
         await api(`/alerts/${row.dataset.id}/read`, { method: 'PATCH' })
         row.classList.add('read')
         loadStats()
@@ -905,15 +984,21 @@ async function initChildView(childId) {
         <div class="alert-feed" id="child-alert-feed">
           ${alerts.length === 0
             ? '<div class="empty-state">No alerts yet.</div>'
-            : alerts.map(a => `
-              <div class="alert-row ${a.read?'read':''}" data-id="${a.id}">
-                <span class="alert-pill pill-${esc(a.level)}">${esc(a.level)}</span>
-                <div class="alert-body">
-                  <div class="alert-title-text">${esc(a.title)}</div>
-                  <div class="alert-meta">${esc(a.category)} · ${timeAgo(a.created_at)}</div>
+            : alerts.map(a => {
+                const g = parseGuidance(a)
+                return `
+              <div class="alert-row ${a.read?'read':''} ${g?'has-guidance':''}" data-id="${esc(String(a.id))}">
+                <div class="alert-row-header">
+                  <span class="alert-pill pill-${esc(a.level)}">${esc(a.level)}</span>
+                  <div class="alert-body">
+                    <div class="alert-title-text">${esc(a.title)}</div>
+                    <div class="alert-meta">${esc(a.category)} · ${timeAgo(a.created_at)}</div>
+                  </div>
+                  ${g ? '<span class="guidance-toggle">What to do ›</span>' : ''}
                 </div>
-              </div>
-            `).join('')
+                ${guidancePanel(g)}
+              </div>`
+              }).join('')
           }
         </div>
       </div>
@@ -957,9 +1042,20 @@ async function initChildView(childId) {
       btn.addEventListener('click', () => openAddDeviceModal(btn.dataset.childId, btn.dataset.childName))
     })
 
+    // Guidance toggle in child view
+    container.querySelectorAll('.alert-row.has-guidance').forEach(row => {
+      row.querySelector('.guidance-toggle')?.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const panel = row.querySelector('.guidance-panel')
+        const toggle = row.querySelector('.guidance-toggle')
+        const open = panel.classList.toggle('open')
+        toggle.textContent = open ? 'Close ‹' : 'What to do ›'
+      })
+    })
+
     // Mark alert read on click
     container.querySelectorAll('.alert-row:not(.read)').forEach(row => {
-      row.addEventListener('click', async () => {
+      row.querySelector('.alert-row-header')?.addEventListener('click', async () => {
         await api(`/alerts/${row.dataset.id}/read`, { method: 'PATCH' })
         row.classList.add('read')
       })

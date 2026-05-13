@@ -289,14 +289,17 @@
   /* ── Alert feed ───────────────────────────────────────────── */
   .alert-feed { padding: 0 28px 28px; flex: 1; overflow-y: auto; }
   .alert-row {
-    display: flex; gap: 16px; align-items: flex-start;
     padding: 16px 0;
     border-top: 0.5px solid var(--line-soft);
-    cursor: pointer; transition: opacity 0.15s;
+    transition: opacity 0.15s;
   }
   .alert-row:first-child { border-top: none; }
-  .alert-row:hover { opacity: 0.8; }
   .alert-row.read { opacity: 0.45; }
+  .alert-row-header {
+    display: flex; gap: 16px; align-items: flex-start;
+    cursor: pointer;
+  }
+  .alert-row-header:hover { opacity: 0.8; }
   .alert-pill {
     font-size: 11px; padding: 4px 12px; border-radius: 100px;
     text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; flex-shrink: 0; margin-top: 2px;
@@ -308,6 +311,24 @@
   .alert-body { flex: 1; }
   .alert-title-text { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
   .alert-meta { font-size: 12px; color: var(--ink-soft); }
+  .guidance-toggle {
+    font-size: 11px; color: var(--moss); font-weight: 600; flex-shrink: 0;
+    cursor: pointer; white-space: nowrap; margin-top: 4px; letter-spacing: 0.2px;
+  }
+  .guidance-panel {
+    display: none; margin-top: 14px; padding: 18px;
+    background: var(--cream-deep); border-radius: 14px;
+  }
+  .guidance-panel.open { display: block; }
+  .guidance-explanation { font-size: 13px; color: var(--ink-soft); line-height: 1.65; margin: 0 0 14px; }
+  .guidance-action, .guidance-starter {
+    background: var(--paper); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .guidance-starter { background: var(--moss-light); margin-bottom: 0; }
+  .guidance-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink-soft); margin-bottom: 5px; font-weight: 600; }
+  .guidance-starter .guidance-label { color: var(--moss-deep); }
+  .guidance-text { font-size: 13px; color: var(--ink); line-height: 1.55; font-weight: 500; }
+  .guidance-quote { font-style: italic; color: var(--moss-deep); }
   .empty-state { padding: 48px 28px; text-align: center; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
 
   /* ── Children list ────────────────────────────────────────── */

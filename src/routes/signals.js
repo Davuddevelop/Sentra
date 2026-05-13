@@ -2,6 +2,7 @@ import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import db from '../db/schema.js'
 import { analyzeSignal } from '../ai/analyzer.js'
+import { generateGuidance } from '../agents/guidance.js'
 import { sendAlertEmail } from '../services/email.js'
 import { sendAlertPush } from '../services/push.js'
 
@@ -115,8 +116,32 @@ router.post('/signal', signalLimiter, async (req, res) => {
     alertId = lastInsertRowid
 
     if (level === 'warn' || level === 'critical') {
-      setImmediate(() => {
-        sendAlertEmail({ parentName: row.parent_name, parentEmail: row.parent_email, childName: row.child_name, alert: { level, title, body } })
+      setImmediate(async () => {
+        // How many times has this signal type fired in the last 7 days?
+        const recentRow = await db.prepare(
+          `SELECT COUNT(*) as count FROM signals WHERE device_id = ? AND type = ? AND created_at > datetime('now', '-7 days')`
+        ).get(row.device_id, type).catch(() => null)
+        const recentCount = recentRow?.count ?? 1
+
+        // GuidanceAgent: generates parent-facing explanation + action + conversation starter
+        const guidance = await generateGuidance({
+          type, level, title,
+          childAge:    row.child_age,
+          platform:    payload.app || type.split('.')[0],
+          recentCount,
+        })
+        if (guidance) {
+          await db.prepare('UPDATE alerts SET guidance = ? WHERE id = ?')
+            .run(JSON.stringify(guidance), alertId)
+            .catch(() => null)
+        }
+
+        sendAlertEmail({
+          parentName:  row.parent_name,
+          parentEmail: row.parent_email,
+          childName:   row.child_name,
+          alert:       { level, title, body, guidance },
+        })
         if (row.push_token) {
           sendAlertPush({ pushToken: row.push_token, childName: row.child_name, level, title })
         }

@@ -124,6 +124,7 @@ await addColIfMissing('users',    'consent_sent_at',    'DATETIME')
 await addColIfMissing('users',    'stripe_customer_id', 'TEXT')
 await addColIfMissing('users',    'stripe_sub_id',      'TEXT')
 await addColIfMissing('users',    'push_token',         'TEXT')
+await addColIfMissing('alerts',   'guidance',           'TEXT')
 
 // Compatibility wrapper — mimics better-sqlite3's prepare().get/all/run() API as async
 function prepare(sql) {

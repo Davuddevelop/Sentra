@@ -32,7 +32,22 @@ async function sendEmail({ from, to, subject, html }) {
 
 function alertEmail({ parentName, parentEmail, childName, alert }) {
   const levelColor = { critical: '#C85A2E', warn: '#D97706', info: '#2C5A3F', ok: '#2C5A3F' }
-  const color = levelColor[alert.level] || '#1A2A22'
+  const color    = levelColor[alert.level] || '#1A2A22'
+  const guidance = alert.guidance
+
+  const guidanceBlock = guidance ? `
+      <div style="border-top:0.5px solid rgba(26,42,34,0.12);margin:24px 0;padding-top:24px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#3C4A42;font-weight:600;margin-bottom:14px">What to do</div>
+        <p style="font-size:14px;color:#1A2A22;line-height:1.65;margin:0 0 16px">${esc(guidance.explanation)}</p>
+        <div style="background:#F3EDDD;border-radius:12px;padding:16px 18px;margin-bottom:12px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#3C4A42;margin-bottom:6px">Action</div>
+          <p style="font-size:14px;color:#1A2A22;margin:0;font-weight:500;line-height:1.5">${esc(guidance.action)}</p>
+        </div>
+        <div style="background:#D9E5D1;border-radius:12px;padding:16px 18px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#1B3A27;margin-bottom:6px">Try saying…</div>
+          <p style="font-size:14px;color:#1B3A27;margin:0;font-style:italic;line-height:1.5">&ldquo;${esc(guidance.conversation_starter)}&rdquo;</p>
+        </div>
+      </div>` : ''
 
   return {
     from: FROM,
@@ -45,12 +60,8 @@ function alertEmail({ parentName, parentEmail, childName, alert }) {
 <body style="margin:0;padding:0;background:#F3EDDD;font-family:Inter,-apple-system,sans-serif">
   <div style="max-width:520px;margin:40px auto;padding:0 20px">
 
-    <!-- Logo -->
-    <div style="margin-bottom:32px;font-family:Georgia,serif;font-size:22px;color:#1A2A22;font-weight:500">
-      ◆ Sentra
-    </div>
+    <div style="margin-bottom:32px;font-family:Georgia,serif;font-size:22px;color:#1A2A22;font-weight:500">◆ Sentra</div>
 
-    <!-- Card -->
     <div style="background:#FBF7EB;border-radius:20px;padding:36px;border:0.5px solid rgba(26,42,34,0.14)">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:${color};font-weight:600;margin-bottom:12px">
         ${esc(alert.level)} alert
@@ -58,24 +69,26 @@ function alertEmail({ parentName, parentEmail, childName, alert }) {
       <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;color:#1A2A22;margin:0 0 12px;letter-spacing:-0.5px;line-height:1.1">
         ${esc(alert.title)}
       </h1>
-      <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 24px">
+      <p style="font-size:15px;color:#3C4A42;line-height:1.6;margin:0 0 20px">
         ${esc(alert.body)}
       </p>
 
-      <div style="background:#F3EDDD;border-radius:12px;padding:16px 20px;margin-bottom:28px">
+      <div style="background:#F3EDDD;border-radius:12px;padding:16px 20px;margin-bottom:24px">
         <div style="font-size:12px;color:#3C4A42;margin-bottom:4px">Child</div>
         <div style="font-size:15px;font-weight:500;color:#1A2A22">${esc(childName)}</div>
       </div>
 
+      ${guidanceBlock}
+
       <a href="${process.env.APP_URL || 'http://localhost:5173'}/dashboard.html"
-         style="display:inline-block;background:#1A2A22;color:#F8F4E8;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:14px;font-weight:500">
+         style="display:inline-block;background:#1A2A22;color:#F8F4E8;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:14px;font-weight:500;margin-top:${guidance ? '24px' : '0'}">
         View in dashboard →
       </a>
     </div>
 
     <p style="font-size:12px;color:#3C4A42;margin-top:24px;text-align:center;line-height:1.6">
       Sentra monitors behavior patterns, never message content.<br>
-      <a href="#" style="color:#2C5A3F">Manage alert settings</a> · <a href="#" style="color:#2C5A3F">Unsubscribe</a>
+      <a href="${process.env.APP_URL || 'http://localhost:5173'}/privacy" style="color:#2C5A3F">Privacy policy</a>
     </p>
   </div>
 </body>
@@ -127,6 +140,22 @@ function weeklyDigestEmail({ parentName, parentEmail, children, weekStart, weekE
     </tr>
   `).join('')
 
+  const insightBlocks = children
+    .filter(c => c.insights)
+    .map(c => {
+      const trendColor = { escalating: '#C85A2E', stable: '#D97706', improving: '#2C5A3F' }
+      const color = trendColor[c.insights.trend] || '#3C4A42'
+      return `
+    <div style="background:#F3EDDD;border-radius:14px;padding:20px 22px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:14px;font-weight:600;color:#1A2A22">${esc(c.name)}</span>
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:${color};font-weight:600">${c.insights.trend}</span>
+      </div>
+      <p style="font-size:13px;color:#3C4A42;line-height:1.6;margin:0 0 10px">${esc(c.insights.summary)}</p>
+      ${c.insights.patterns.map(p => `<div style="font-size:12px;color:#3C4A42;padding:4px 0;border-top:0.5px solid rgba(26,42,34,0.08)">· ${esc(p)}</div>`).join('')}
+    </div>`
+    }).join('')
+
   return {
     from: FROM,
     to: parentEmail,
@@ -170,15 +199,21 @@ function weeklyDigestEmail({ parentName, parentEmail, children, weekStart, weekE
         <tbody>${childRows}</tbody>
       </table>
 
+      ${insightBlocks ? `
+      <div style="margin-top:28px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#3C4A42;font-weight:600;margin-bottom:14px">AI insights this week</div>
+        ${insightBlocks}
+      </div>` : ''}
+
       <a href="${process.env.APP_URL || 'http://localhost:5173'}/dashboard.html"
-         style="display:inline-block;background:#1A2A22;color:#F8F4E8;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:14px;font-weight:500">
+         style="display:inline-block;background:#1A2A22;color:#F8F4E8;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:14px;font-weight:500;margin-top:28px">
         View full report →
       </a>
     </div>
 
     <p style="font-size:12px;color:#3C4A42;margin-top:24px;text-align:center;line-height:1.6">
       Sentra monitors behavior patterns, never message content.<br>
-      <a href="${process.env.APP_URL || 'http://localhost:5173'}/privacy" style="color:#2C5A3F">Privacy policy</a> · <a href="#" style="color:#2C5A3F">Unsubscribe</a>
+      <a href="${process.env.APP_URL || 'http://localhost:5173'}/privacy" style="color:#2C5A3F">Privacy policy</a>
     </p>
   </div>
 </body>
