@@ -203,6 +203,20 @@
     white-space: nowrap; flex-shrink: 0;
   }
   .consent-banner-btn:hover { background: #FCD34D; }
+  .demo-bar {
+    background: var(--ink); color: var(--cream-soft);
+    padding: 10px 28px; display: flex; align-items: center;
+    justify-content: space-between; gap: 16px; flex-shrink: 0; flex-wrap: wrap;
+    font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .demo-bar-cta {
+    background: var(--moss); color: var(--cream-soft);
+    border: none; border-radius: 100px;
+    padding: 8px 18px; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; font-family: inherit;
+    flex-shrink: 0;
+  }
+  .demo-bar-cta:hover { background: var(--moss-deep); }
 
   /* ── Main content ─────────────────────────────────────────── */
   .main { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -788,6 +802,11 @@
         <strong>Action required:</strong> Check your inbox and click the confirmation link to activate parental monitoring. Required for COPPA compliance.
       </div>
       <button class="consent-banner-btn" id="resend-consent-btn">Resend email</button>
+    </div>
+
+    <div id="demo-banner" class="demo-bar" style="display:none">
+      <span>You're viewing <strong>sample data</strong> — this is what Sentra looks like once your child's browser is connected.</span>
+      <button class="demo-bar-cta" onclick="window.location.href='/'">Create free account →</button>
     </div>
 
     <div class="topbar">
