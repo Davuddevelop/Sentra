@@ -78,6 +78,10 @@
   "homepage_url": "https://sentra-peach-delta.vercel.app",
   "privacy_policy": "https://sentra-peach-delta.vercel.app/privacy",
 
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+
   "icons": {
     "16":  "icons/icon16.png",
     "32":  "icons/icon32.png",

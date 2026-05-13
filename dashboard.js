@@ -8,6 +8,9 @@ const charts    = {} // keyed by canvas id — destroyed before re-init
 
 // ─── Helpers ────────────────────────────────────────────────
 const $ = (sel) => document.querySelector(sel)
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+// Device tokens stored in JS memory, never in DOM attributes
+const tokenStore = new Map()
 const show = (el) => { el.style.display = 'flex' }
 const hide = (el) => { el.style.display = 'none' }
 
@@ -318,10 +321,10 @@ function renderAlertRows(alerts, feed, isDemo = false) {
   feed.innerHTML = (isDemo ? '<div class="demo-banner">Sample data — add a child to see real monitoring</div>' : '')
     + alerts.map(a => `
       <div class="alert-row ${a.read ? 'read' : ''}" data-id="${a.id}">
-        <span class="alert-pill pill-${a.level}">${a.level}</span>
+        <span class="alert-pill pill-${esc(a.level)}">${esc(a.level)}</span>
         <div class="alert-body">
-          <div class="alert-title-text">${a.title}</div>
-          <div class="alert-meta">${a.child_name} · ${timeAgo(a.created_at)}</div>
+          <div class="alert-title-text">${esc(a.title)}</div>
+          <div class="alert-meta">${esc(a.child_name)} · ${timeAgo(a.created_at)}</div>
         </div>
       </div>
     `).join('')
@@ -393,25 +396,27 @@ async function loadChildren() {
         <div class="child-row-header">
           <div class="child-avatar">${initials(c.name)}</div>
           <div class="child-info">
-            <div class="child-name">${c.name}${c.age ? `, ${c.age}` : ''}</div>
+            <div class="child-name">${esc(c.name)}${c.age ? `, ${c.age}` : ''}</div>
             <div class="child-devices-label">${c.devices.length} device${c.devices.length !== 1 ? 's' : ''} connected</div>
           </div>
-          <button class="add-device-link" data-child-id="${c.id}" data-child-name="${c.name}">+ Add device</button>
+          <button class="add-device-link" data-child-id="${c.id}" data-child-name="${esc(c.name)}">+ Add device</button>
         </div>
         <div class="devices-section">
           ${c.devices.length === 0
             ? `<span class="no-devices-hint">No devices connected yet.</span>`
             : c.devices.map(d => {
                 const s = deviceStatus(d.last_seen)
+                const tokenKey = `tk_${Math.random().toString(36).slice(2)}`
+                tokenStore.set(tokenKey, d.device_token)
                 return `
                 <div class="device-item">
                   <span class="device-item-icon">${platformIcon(d.platform)}</span>
-                  <span class="device-item-name">${d.name}</span>
-                  <span class="platform-badge platform-${d.platform}">${platformLabel(d.platform)}</span>
+                  <span class="device-item-name">${esc(d.name)}</span>
+                  <span class="platform-badge platform-${esc(d.platform)}">${esc(platformLabel(d.platform))}</span>
                   <span class="device-status">
                     <span class="status-dot-sm ${s.cls}"></span>${s.label}
                   </span>
-                  <button class="device-token-btn" data-token="${d.device_token}">Copy token</button>
+                  <button class="device-token-btn" data-token-key="${tokenKey}">Copy token</button>
                 </div>`
               }).join('')
           }
@@ -419,10 +424,12 @@ async function loadChildren() {
       </div>
     `).join('')
 
-    // Copy token buttons
+    // Copy token buttons — token read from JS Map, never from DOM attribute
     list.querySelectorAll('.device-token-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        navigator.clipboard.writeText(btn.dataset.token).then(() => {
+        const token = tokenStore.get(btn.dataset.tokenKey)
+        if (!token) return
+        navigator.clipboard.writeText(token).then(() => {
           btn.textContent = 'Copied!'
           setTimeout(() => { btn.textContent = 'Copy token' }, 2000)
         })
@@ -436,7 +443,7 @@ async function loadChildren() {
 
     sidebar.innerHTML = children.map(c => `
       <div class="nav-child-item" data-child-id="${c.id}" style="cursor:pointer">
-        <span class="child-dot"></span>${c.name}
+        <span class="child-dot"></span>${esc(c.name)}
       </div>
     `).join('')
     sidebar.querySelectorAll('.nav-child-item').forEach(el => {
@@ -594,10 +601,10 @@ async function loadActivityTable(reset = false) {
 
     const rows = alerts.map(a => `
       <tr class="${a.read ? 'read' : ''}" data-id="${a.id}">
-        <td><span class="alert-pill pill-${a.level}">${a.level}</span></td>
-        <td style="font-weight:500;max-width:260px">${a.title}</td>
-        <td style="color:var(--ink-soft)">${a.category}</td>
-        <td style="color:var(--ink-soft)">${a.child_name}</td>
+        <td><span class="alert-pill pill-${esc(a.level)}">${esc(a.level)}</span></td>
+        <td style="font-weight:500;max-width:260px">${esc(a.title)}</td>
+        <td style="color:var(--ink-soft)">${esc(a.category)}</td>
+        <td style="color:var(--ink-soft)">${esc(a.child_name)}</td>
         <td style="color:var(--ink-soft);white-space:nowrap">${timeAgo(a.created_at)}</td>
       </tr>
     `).join('')
@@ -723,7 +730,7 @@ async function initWeeklyView() {
             <div class="child-avatar" style="width:40px;height:40px;font-size:14px;flex-shrink:0">${initials(c.name)}</div>
             <div class="risk-bar-wrap">
               <div class="risk-bar-label">
-                <span style="font-weight:500;font-size:14px;color:var(--ink)">${c.name}</span>
+                <span style="font-weight:500;font-size:14px;color:var(--ink)">${esc(c.name)}</span>
                 <span>${c.count} signals &nbsp;·&nbsp; <span style="color:#C85A2E">${c.critical} critical</span> &nbsp;·&nbsp; <span style="color:#D97706">${c.warn} warnings</span></span>
               </div>
               <div class="risk-bar-track">
@@ -750,7 +757,7 @@ async function initChildView(childId) {
       <div class="child-detail-header">
         <div class="child-detail-avatar">${initials(child.name)}</div>
         <div>
-          <div class="child-detail-name">${child.name}</div>
+          <div class="child-detail-name">${esc(child.name)}</div>
           <div class="child-detail-age">${child.age ? `Age ${child.age}` : 'Age not set'}</div>
         </div>
       </div>
@@ -765,19 +772,21 @@ async function initChildView(childId) {
       <div class="two-col" style="margin-bottom:24px;flex:0 0 auto">
         <div class="card">
           <div class="card-header"><span class="card-title">Devices</span>
-            <button class="card-action add-device-link" data-child-id="${child.id}" data-child-name="${child.name}">+ Add device</button>
+            <button class="card-action add-device-link" data-child-id="${child.id}" data-child-name="${esc(child.name)}">+ Add device</button>
           </div>
           <div style="padding:0 24px 24px">
             ${devices.length === 0
               ? '<p class="no-devices-hint">No devices connected yet.</p>'
               : devices.map(d => {
                   const s = deviceStatus(d.last_seen)
+                  const tokenKey = `tk_${Math.random().toString(36).slice(2)}`
+                  tokenStore.set(tokenKey, d.device_token)
                   return `<div class="device-item" style="margin-bottom:8px">
                     <span class="device-item-icon">${platformIcon(d.platform)}</span>
-                    <span class="device-item-name">${d.name}</span>
-                    <span class="platform-badge platform-${d.platform}">${platformLabel(d.platform)}</span>
+                    <span class="device-item-name">${esc(d.name)}</span>
+                    <span class="platform-badge platform-${esc(d.platform)}">${esc(platformLabel(d.platform))}</span>
                     <span class="device-status"><span class="status-dot-sm ${s.cls}"></span>${s.label}</span>
-                    <button class="device-token-btn" data-token="${d.device_token}">Copy token</button>
+                    <button class="device-token-btn" data-token-key="${tokenKey}">Copy token</button>
                   </div>`
                 }).join('')
             }
@@ -797,10 +806,10 @@ async function initChildView(childId) {
             ? '<div class="empty-state">No alerts yet.</div>'
             : alerts.map(a => `
               <div class="alert-row ${a.read?'read':''}" data-id="${a.id}">
-                <span class="alert-pill pill-${a.level}">${a.level}</span>
+                <span class="alert-pill pill-${esc(a.level)}">${esc(a.level)}</span>
                 <div class="alert-body">
-                  <div class="alert-title-text">${a.title}</div>
-                  <div class="alert-meta">${a.category} · ${timeAgo(a.created_at)}</div>
+                  <div class="alert-title-text">${esc(a.title)}</div>
+                  <div class="alert-meta">${esc(a.category)} · ${timeAgo(a.created_at)}</div>
                 </div>
               </div>
             `).join('')
@@ -808,6 +817,17 @@ async function initChildView(childId) {
         </div>
       </div>
     `
+
+    container.querySelectorAll('.device-token-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const token = tokenStore.get(btn.dataset.tokenKey)
+        if (!token) return
+        navigator.clipboard.writeText(token).then(() => {
+          btn.textContent = 'Copied!'
+          setTimeout(() => { btn.textContent = 'Copy token' }, 2000)
+        })
+      })
+    })
 
     const actData = await api(`/activity?days=7&child_id=${childId}`)
 

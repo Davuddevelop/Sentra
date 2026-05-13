@@ -25,16 +25,18 @@ async function init() {
       const data = await res.json()
       dot.classList.remove('inactive')
       text.textContent = 'Active — monitoring AI apps'
-      sec.innerHTML = `
-        <div class="device-row">
-          <div class="device-label">Device</div>
-          <div class="device-token" style="font-family:inherit;font-size:13px">${data.device_name}</div>
-        </div>
-        <div class="device-row" style="margin-top:6px">
-          <div class="device-label">Monitoring</div>
-          <div class="device-token" style="font-family:inherit;font-size:13px">${data.child_name}</div>
-        </div>
-      `
+      sec.innerHTML = ''
+      const makeRow = (label, value) => {
+        const row = document.createElement('div')
+        row.className = 'device-row'
+        row.style.marginTop = label === 'Monitoring' ? '6px' : '0'
+        const lEl = document.createElement('div'); lEl.className = 'device-label'; lEl.textContent = label
+        const vEl = document.createElement('div'); vEl.className = 'device-token'; vEl.style.cssText = 'font-family:inherit;font-size:13px'; vEl.textContent = value
+        row.appendChild(lEl); row.appendChild(vEl)
+        return row
+      }
+      sec.appendChild(makeRow('Device', data.device_name))
+      sec.appendChild(makeRow('Monitoring', data.child_name))
     } else {
       dot.classList.add('inactive')
       text.textContent = 'Token invalid — reconfigure'

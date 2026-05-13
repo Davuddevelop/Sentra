@@ -19,14 +19,29 @@ import { startSimulator } from './src/simulator.js'
 const app = express()
 
 const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'http://localhost:8000',
+  ...(process.env.NODE_ENV !== 'production'
+    ? ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3001', 'http://localhost:8000']
+    : []),
   ...(process.env.APP_URL ? [process.env.APP_URL] : []),
 ]
 
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+
 app.use(compression())
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' https://cdn.jsdelivr.net; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src https://fonts.gstatic.com; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self' https://sentra-peach-delta.vercel.app https://api.qrserver.com")
+  next()
+})
 app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }))
 // Must be before express.json() — Stripe needs raw body for signature verification
 app.use('/api/billing/webhook', express.raw({ type: 'application/json' }))
@@ -92,12 +107,15 @@ app.get('/install/:token', async (req, res) => {
   }
 
   const { device_token, device_name, child_name } = row
+  const eChildName  = esc(child_name)
+  const eDeviceName = esc(device_name)
+  const eToken      = esc(device_token)
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connect ${child_name}'s browser — Sentra</title>
+  <title>Connect ${eChildName}'s browser — Sentra</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,300&family=Inter:wght@400;500&display=swap" rel="stylesheet">
   <style>
@@ -131,12 +149,12 @@ app.get('/install/:token', async (req, res) => {
     canvas { border-radius: 10px; }
   </style>
 </head>
-<body data-device-token="${device_token}">
+<body data-device-token="${eToken}">
   <div class="logo"><span class="logo-dot"></span> Sentra</div>
 
   <div class="card">
     <div class="eyebrow">Device Setup</div>
-    <h1>Connect <em>${child_name}</em>'s browser to Sentra</h1>
+    <h1>Connect <em>${eChildName}</em>'s browser to Sentra</h1>
 
     <div class="step">
       <div class="step-num">1</div>
@@ -157,9 +175,9 @@ app.get('/install/:token', async (req, res) => {
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <div class="step-label">Connect to ${child_name}'s profile</div>
-        <div class="step-desc">After installing, Sentra will automatically connect to ${child_name}'s profile. No copying needed.</div>
-        <div class="token-box" id="token-val">${device_token}</div>
+        <div class="step-label">Connect to ${eChildName}'s profile</div>
+        <div class="step-desc">After installing, Sentra will automatically connect to ${eChildName}'s profile. No copying needed.</div>
+        <div class="token-box" id="token-val">${eToken}</div>
         <div style="font-size:12px;color:#3C4A42;margin-top:8px">Already have Sentra installed? Copy this token and paste it in the extension settings.</div>
         <div class="qr-wrap">
           <img id="qr-img" style="border-radius:10px;width:100px;height:100px" alt="QR code">
@@ -168,7 +186,7 @@ app.get('/install/:token', async (req, res) => {
       </div>
     </div>
 
-    <div class="expiry">⏱ This link expires in 24 hours. Device: <strong>${device_name}</strong></div>
+    <div class="expiry">⏱ This link expires in 24 hours. Device: <strong>${eDeviceName}</strong></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
