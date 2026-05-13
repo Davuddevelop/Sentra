@@ -798,35 +798,6 @@
   .modal-submit:disabled { opacity: 0.55; cursor: not-allowed; }
   .modal-fine { font-size: 12px; color: var(--ink-soft); text-align: center; }
 
-  /* VIDEO MODAL */
-  #video-modal .modal-box {
-    max-width: 800px; padding: 0; overflow: hidden;
-    background: var(--ink); border-radius: 20px;
-  }
-  .video-wrapper {
-    aspect-ratio: 16/9; display: flex;
-    align-items: center; justify-content: center;
-    background: var(--ink); position: relative;
-  }
-  .video-placeholder {
-    display: flex; flex-direction: column; align-items: center; gap: 20px;
-    color: var(--cream-soft);
-  }
-  .video-play-btn {
-    width: 80px; height: 80px; border-radius: 50%;
-    background: rgba(248, 244, 232, 0.1);
-    border: 1.5px solid rgba(248, 244, 232, 0.25);
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.2s, transform 0.2s;
-  }
-  .video-play-btn:hover { background: rgba(248, 244, 232, 0.18); transform: scale(1.06); }
-  .video-placeholder p { font-size: 14px; color: rgba(248,244,232,0.55); font-family: 'Fraunces', serif; font-size: 18px; }
-  #video-modal .modal-close {
-    position: absolute; top: 16px; right: 16px; z-index: 10;
-    background: rgba(26, 42, 34, 0.7); border-color: rgba(255,255,255,0.15);
-    color: var(--cream-soft);
-  }
-
   /* TOAST */
   #toast-container {
     position: fixed; bottom: 32px; right: 32px; z-index: 500;
@@ -1402,7 +1373,7 @@
   <p>Start protecting your family today. Free forever on Starter — no credit card needed.</p>
   <div class="hero-ctas" style="justify-content:center;">
     <button class="btn-primary" data-modal="auth-modal" data-plan="family">Get started — free</button>
-    <button class="btn-secondary" data-modal="video-modal">Watch 90-second demo</button>
+    <a href="/dashboard.html?demo=1" class="btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center">See live demo →</a>
   </div>
 </section>
 
@@ -1496,20 +1467,6 @@
 </div>
 
 <!-- VIDEO MODAL -->
-<div id="video-modal" class="modal-overlay">
-  <div class="modal-box">
-    <button class="modal-close" data-close-modal="video-modal">✕</button>
-    <div class="video-wrapper">
-      <div class="video-placeholder">
-        <div class="video-play-btn">
-          <svg width="22" height="24" viewBox="0 0 22 24"><path d="M2 1 L20 12 L2 23 Z" fill="#F8F4E8"/></svg>
-        </div>
-        <p>Demo coming soon</p>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- TOAST -->
 <div id="toast-container"></div>
 
