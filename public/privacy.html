@@ -38,7 +38,7 @@
   <p class="date">Last updated: April 2026</p>
 
   <div class="highlight">
-    <p>Sentra is built on a Zero-Knowledge principle: we analyse behavioral patterns, never message content. No AI conversation text ever reaches our servers.</p>
+    <p>Sentra analyses behavioral patterns, never message content. No AI conversation text ever reaches our servers — only the signal type and a risk score.</p>
   </div>
 
   <h2>1. What we collect</h2>
@@ -79,7 +79,8 @@
   <p>Sentra uses the following third-party services:</p>
   <ul>
     <li><strong>Anthropic Claude API</strong> — used to analyse behavioral metadata and generate alert descriptions. Metadata (signal type, session duration, app name) may be sent to Anthropic. No message content is included. Anthropic's privacy policy applies.</li>
-    <li><strong>Email provider</strong> — used to send alert notifications and weekly digests to parents.</li>
+    <li><strong>Resend</strong> — used to send alert notifications and weekly digests to parents. Your email address is shared with Resend for delivery purposes only.</li>
+    <li><strong>Stripe</strong> — used to process subscription payments. Payment card data is handled entirely by Stripe and never touches our servers. Stripe's privacy policy applies.</li>
   </ul>
 
   <h2>6. Your rights (GDPR)</h2>

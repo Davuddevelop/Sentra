@@ -203,6 +203,20 @@
     white-space: nowrap; flex-shrink: 0;
   }
   .consent-banner-btn:hover { background: #FCD34D; }
+  .demo-bar {
+    background: var(--ink); color: var(--cream-soft);
+    padding: 10px 28px; display: flex; align-items: center;
+    justify-content: space-between; gap: 16px; flex-shrink: 0; flex-wrap: wrap;
+    font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .demo-bar-cta {
+    background: var(--moss); color: var(--cream-soft);
+    border: none; border-radius: 100px;
+    padding: 8px 18px; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; font-family: inherit;
+    flex-shrink: 0;
+  }
+  .demo-bar-cta:hover { background: var(--moss-deep); }
 
   /* ── Main content ─────────────────────────────────────────── */
   .main { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -275,14 +289,17 @@
   /* ── Alert feed ───────────────────────────────────────────── */
   .alert-feed { padding: 0 28px 28px; flex: 1; overflow-y: auto; }
   .alert-row {
-    display: flex; gap: 16px; align-items: flex-start;
     padding: 16px 0;
     border-top: 0.5px solid var(--line-soft);
-    cursor: pointer; transition: opacity 0.15s;
+    transition: opacity 0.15s;
   }
   .alert-row:first-child { border-top: none; }
-  .alert-row:hover { opacity: 0.8; }
   .alert-row.read { opacity: 0.45; }
+  .alert-row-header {
+    display: flex; gap: 16px; align-items: flex-start;
+    cursor: pointer;
+  }
+  .alert-row-header:hover { opacity: 0.8; }
   .alert-pill {
     font-size: 11px; padding: 4px 12px; border-radius: 100px;
     text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; flex-shrink: 0; margin-top: 2px;
@@ -294,6 +311,24 @@
   .alert-body { flex: 1; }
   .alert-title-text { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
   .alert-meta { font-size: 12px; color: var(--ink-soft); }
+  .guidance-toggle {
+    font-size: 11px; color: var(--moss); font-weight: 600; flex-shrink: 0;
+    cursor: pointer; white-space: nowrap; margin-top: 4px; letter-spacing: 0.2px;
+  }
+  .guidance-panel {
+    display: none; margin-top: 14px; padding: 18px;
+    background: var(--cream-deep); border-radius: 14px;
+  }
+  .guidance-panel.open { display: block; }
+  .guidance-explanation { font-size: 13px; color: var(--ink-soft); line-height: 1.65; margin: 0 0 14px; }
+  .guidance-action, .guidance-starter {
+    background: var(--paper); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .guidance-starter { background: var(--moss-light); margin-bottom: 0; }
+  .guidance-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink-soft); margin-bottom: 5px; font-weight: 600; }
+  .guidance-starter .guidance-label { color: var(--moss-deep); }
+  .guidance-text { font-size: 13px; color: var(--ink); line-height: 1.55; font-weight: 500; }
+  .guidance-quote { font-style: italic; color: var(--moss-deep); }
   .empty-state { padding: 48px 28px; text-align: center; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
 
   /* ── Children list ────────────────────────────────────────── */
@@ -688,10 +723,7 @@
 <div id="auth-screen" class="auth-screen" style="display:none">
   <div class="auth-box">
     <div class="auth-logo">
-      <svg width="20" height="24" viewBox="0 0 22 26" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z" fill="#2C5A3F" stroke="#1A2A22" stroke-width="1"/>
-        <circle cx="11" cy="11" r="2.5" fill="#F3EDDD"/>
-      </svg>
+      <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="100" height="100" fill="#F3EDDD"/><path fill="none" stroke="#1A2A22" stroke-width="24" stroke-linecap="round" d="M 26,34 C 22,12 40,4 58,8 C 78,12 84,30 76,46 C 68,56 32,54 24,66 C 16,76 22,94 44,94 C 62,94 78,86 74,66"/><path fill="#F3EDDD" d="M 50,14 Q 52,49 86,50 Q 52,51 50,86 Q 48,51 14,50 Q 48,49 50,14 Z"/></svg>
       Sentra
     </div>
     <div id="auth-error" class="auth-error"></div>
@@ -733,10 +765,7 @@
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <svg width="20" height="24" viewBox="0 0 22 26" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11 1 L20 5 L20 13 C20 19 16 24 11 25 C6 24 2 19 2 13 L2 5 Z" fill="#2C5A3F" stroke="#1A2A22" stroke-width="1"/>
-        <circle cx="11" cy="11" r="2.5" fill="#F3EDDD"/>
-      </svg>
+      <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="100" height="100" fill="#F3EDDD"/><path fill="none" stroke="#1A2A22" stroke-width="24" stroke-linecap="round" d="M 26,34 C 22,12 40,4 58,8 C 78,12 84,30 76,46 C 68,56 32,54 24,66 C 16,76 22,94 44,94 C 62,94 78,86 74,66"/><path fill="#F3EDDD" d="M 50,14 Q 52,49 86,50 Q 52,51 50,86 Q 48,51 14,50 Q 48,49 50,14 Z"/></svg>
       Sentra
     </div>
     <div class="sidebar-profile">
@@ -788,6 +817,11 @@
         <strong>Action required:</strong> Check your inbox and click the confirmation link to activate parental monitoring. Required for COPPA compliance.
       </div>
       <button class="consent-banner-btn" id="resend-consent-btn">Resend email</button>
+    </div>
+
+    <div id="demo-banner" class="demo-bar" style="display:none">
+      <span>You're viewing <strong>sample data</strong> — this is what Sentra looks like once your child's browser is connected.</span>
+      <button class="demo-bar-cta" onclick="window.location.href='/'">Create free account →</button>
     </div>
 
     <div class="topbar">
