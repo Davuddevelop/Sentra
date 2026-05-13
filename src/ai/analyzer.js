@@ -45,12 +45,20 @@ export async function analyzeSignal(type, payload = {}, context = {}) {
     })
 
     const text = message.content[0]?.text?.trim()
+    if (!text) throw new Error('Empty AI response')
     const parsed = JSON.parse(text)
 
-    // Validate shape
-    if (typeof parsed.risk_score !== 'number' || !parsed.level || !parsed.title || !parsed.body) {
+    const VALID_LEVELS = ['ok', 'info', 'warn', 'critical']
+    if (
+      typeof parsed.risk_score !== 'number' ||
+      !VALID_LEVELS.includes(parsed.level) ||
+      !parsed.title ||
+      !parsed.body
+    ) {
       throw new Error('Invalid AI response shape')
     }
+    // Clamp risk_score to valid range
+    parsed.risk_score = Math.max(0, Math.min(100, parsed.risk_score))
 
     return parsed
   } catch (err) {

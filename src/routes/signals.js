@@ -93,11 +93,18 @@ router.post('/signal', signalLimiter, async (req, res) => {
   const body      = ai?.body  ?? payload.body  ?? `Signal type: ${type}`
 
   // Batch the two writes into one round-trip where possible
-  const [{ lastInsertRowid: signalId }] = await Promise.all([
-    db.prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed) VALUES (?, ?, ?, ?, 1)')
-      .run(row.device_id, type, JSON.stringify(payload), riskScore),
-    db.prepare('UPDATE devices SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(row.device_id),
-  ])
+  let signalId
+  try {
+    const [insertResult] = await Promise.all([
+      db.prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed) VALUES (?, ?, ?, ?, 1)')
+        .run(row.device_id, type, JSON.stringify(payload), riskScore),
+      db.prepare('UPDATE devices SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(row.device_id),
+    ])
+    signalId = insertResult.lastInsertRowid
+  } catch (err) {
+    console.error('[signals] DB write failed:', err.message)
+    return res.status(500).json({ error: 'Failed to record signal.' })
+  }
 
   let alertId = null
   if (riskScore >= 20) {

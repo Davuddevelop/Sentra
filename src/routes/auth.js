@@ -16,7 +16,8 @@ const authLimiter = rateLimit({
   message: { error: 'Too many attempts — try again in 15 minutes.' },
 })
 const SALT_ROUNDS = 12
-const JWT_SECRET = process.env.JWT_SECRET || 'sentra-dev-secret-change-in-prod'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) throw new Error('JWT_SECRET env var is required — set it in .env or Vercel dashboard')
 const JWT_EXPIRES = '7d'
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -121,7 +122,7 @@ router.post('/resend-consent', async (req, res) => {
   const token = req.cookies?.token
   if (!token) return res.status(401).json({ error: 'Not authenticated.' })
   try {
-    const payload = jwt.verify(token, JWT_SECRET)
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] })
     const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id)
     if (!user || user.consent_verified) return res.json({ ok: true })
 
@@ -147,7 +148,7 @@ router.get('/me', async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Not authenticated.' })
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET)
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] })
     const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id)
     if (!user) return res.status(401).json({ error: 'User not found.' })
     res.json({ user: safeUser(user) })

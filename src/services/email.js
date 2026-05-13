@@ -222,7 +222,7 @@ export async function sendConsentEmail({ name, email, consentToken }) {
         Confirm parental consent →
       </a>
       <p style="font-size:12px;color:#3C4A42;margin-top:20px;line-height:1.6">
-        This link expires in 48 hours. If you did not create this account, you can safely ignore this email.<br><br>
+        This link expires in 72 hours. If you did not create this account, you can safely ignore this email.<br><br>
         Sentra monitors behavioral metadata only — we never read message content.<br>
         <a href="${appUrl}/privacy" style="color:#2C5A3F">Privacy policy</a>
       </p>

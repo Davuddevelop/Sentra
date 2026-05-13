@@ -57,9 +57,7 @@
     },
     {
       "matches": [
-        "https://sentra-peach-delta.vercel.app/install/*",
-        "http://localhost:3001/install/*",
-        "http://localhost:5173/install/*"
+        "https://sentra-peach-delta.vercel.app/install/*"
       ],
       "js": ["content-install.js"],
       "run_at": "document_idle"
@@ -75,6 +73,13 @@
 
   "externally_connectable": {
     "matches": ["https://sentra-peach-delta.vercel.app/*"]
+  },
+
+  "homepage_url": "https://sentra-peach-delta.vercel.app",
+  "privacy_policy": "https://sentra-peach-delta.vercel.app/privacy",
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   },
 
   "icons": {

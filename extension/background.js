@@ -7,7 +7,6 @@
  * close) instead of an in-memory object.
  */
 
-// Update this to your production URL before publishing to the Chrome Store
 const API_BASE = 'https://sentra-peach-delta.vercel.app'
 
 // ── Signal queue (persisted in chrome.storage.local) ────────────────────────
@@ -21,31 +20,28 @@ async function flushQueue() {
   const { deviceToken, queue = [] } = await chrome.storage.local.get(['deviceToken', 'queue'])
   if (!deviceToken || !queue.length) return
 
-  const toSend = [...queue]
-  await chrome.storage.local.set({ queue: [] })
-
-  let failedFrom = -1
-  for (let i = 0; i < toSend.length; i++) {
+  // Send signals one by one without clearing the queue first.
+  // This ensures no signals are lost if the service worker is killed mid-flush.
+  let sentCount = 0
+  for (const signal of queue) {
     try {
-      await fetch(`${API_BASE}/api/signal`, {
+      const res = await fetch(`${API_BASE}/api/signal`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Device-Token': deviceToken,
-        },
-        body: JSON.stringify({ type: toSend[i].type, payload: toSend[i].payload }),
+        headers: { 'Content-Type': 'application/json', 'X-Device-Token': deviceToken },
+        body: JSON.stringify({ type: signal.type, payload: signal.payload }),
       })
+      if (!res.ok) break
+      sentCount++
     } catch (err) {
-      console.warn('[sentra] signal send failed, re-queuing remaining:', err.message)
-      failedFrom = i
+      console.warn('[sentra] signal send failed, will retry:', err.message)
       break
     }
   }
 
-  if (failedFrom !== -1) {
-    for (const signal of toSend.slice(failedFrom)) {
-      await enqueueSignal(signal)
-    }
+  if (sentCount > 0) {
+    // Slice from live queue so signals enqueued during the flush are preserved.
+    const { queue: current = [] } = await chrome.storage.local.get('queue')
+    await chrome.storage.local.set({ queue: current.slice(sentCount) })
   }
 }
 

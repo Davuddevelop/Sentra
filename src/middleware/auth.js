@@ -1,15 +1,16 @@
 import jwt from 'jsonwebtoken'
 import db from '../db/schema.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sentra-dev-secret-change-in-prod'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) throw new Error('JWT_SECRET env var is required — set it in .env or Vercel dashboard')
 
 export async function requireAuth(req, res, next) {
   const token = req.cookies?.token
   if (!token) return res.status(401).json({ error: 'Authentication required.' })
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET)
-    const user = await db.prepare('SELECT id, email, name, plan, plan_status, created_at FROM users WHERE id = ?').get(payload.id)
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] })
+    const user = await db.prepare('SELECT id, email, name, plan, plan_status, stripe_customer_id, created_at FROM users WHERE id = ?').get(payload.id)
     if (!user) return res.status(401).json({ error: 'User not found.' })
     req.user = user
     next()

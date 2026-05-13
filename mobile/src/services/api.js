@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const API_BASE = 'http://localhost:3001' // Change to production URL before release
+const API_BASE = 'https://sentra-peach-delta.vercel.app'
 
 export async function getToken() {
   return AsyncStorage.getItem('deviceToken')

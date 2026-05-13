@@ -985,7 +985,7 @@
         </div>
       </div>
       <div style="text-align:center">
-        <canvas id="token-qr" style="border-radius:10px;display:block"></canvas>
+        <img id="token-qr" style="border-radius:10px;width:120px;height:120px" alt="QR code">
         <div style="font-size:11px;color:var(--ink-soft);margin-top:6px">Scan to pair</div>
       </div>
     </div>
@@ -1097,6 +1097,29 @@
         </div>
       </div>
       <button class="onboarding-btn" id="ob-finish" style="margin-top:24px">Go to my dashboard →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upgrade plan modal -->
+<div id="upgrade-plan-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:480px">
+    <button class="modal-close" id="upgrade-modal-close">✕</button>
+    <h2 class="modal-title">Choose your plan</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:24px;line-height:1.55">Upgrade anytime. Cancel anytime through your billing portal.</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--paper);border:0.5px solid var(--line);border-radius:20px;padding:24px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--ink-soft);margin-bottom:6px">Family</div>
+        <div style="font-size:26px;font-weight:600;letter-spacing:-0.5px;margin-bottom:4px">$12<span style="font-size:14px;font-weight:400;color:var(--ink-soft)">/mo</span></div>
+        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px">Up to 5 devices — covers most families.</div>
+        <button class="modal-submit" id="checkout-family-btn">Choose Family →</button>
+      </div>
+      <div style="background:var(--ink);border-radius:20px;padding:24px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--terra-soft);margin-bottom:6px">Family+</div>
+        <div style="font-size:26px;font-weight:600;letter-spacing:-0.5px;color:#F8F4E8;margin-bottom:4px">$18<span style="font-size:14px;font-weight:400;opacity:0.6">/mo</span></div>
+        <div style="font-size:13px;color:rgba(248,244,232,0.6);margin-bottom:16px">Unlimited devices — for larger families or multiple homes.</div>
+        <button class="modal-submit" id="checkout-family-plus-btn" style="background:var(--moss)">Choose Family+ →</button>
+      </div>
     </div>
   </div>
 </div>

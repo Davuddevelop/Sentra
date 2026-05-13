@@ -65,7 +65,7 @@ router.post('/portal', requireAuth, async (req, res) => {
 })
 
 /* ── POST /api/billing/webhook ───────────────────────────── */
-router.post('/webhook', express_raw(), async (req, res) => {
+router.post('/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature']
   let event
 
@@ -116,15 +116,6 @@ router.post('/webhook', express_raw(), async (req, res) => {
 
   res.json({ received: true })
 })
-
-function express_raw() {
-  return (req, res, next) => {
-    let data = ''
-    req.setEncoding('utf8')
-    req.on('data', chunk => { data += chunk })
-    req.on('end', () => { req.body = data; next() })
-  }
-}
 
 /* ── GET /api/billing/status ─────────────────────────────── */
 router.get('/status', requireAuth, (req, res) => {
