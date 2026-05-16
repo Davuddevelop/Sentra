@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+body { margin: 40px; background: #F3EDDD; font-family: sans-serif; display: flex; gap: 40px; flex-wrap: wrap; }
+.swatch { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; }
+.dark { background: #1A2A22; padding: 16px; border-radius: 12px; }
+</style></head>
+<body>
+
+<!-- Attempt 1: Current stroked (BAD - for comparison) -->
+<div class="swatch">
+  <span>Current (bad)</span>
+  <svg width="120" height="120" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#F3EDDD"/>
+    <path fill="none" stroke="#1A2A22" stroke-width="24" stroke-linecap="round" d="M 26,34 C 22,12 40,4 58,8 C 78,12 84,30 76,46 C 68,56 32,54 24,66 C 16,76 22,94 44,94 C 62,94 78,86 74,66"/>
+    <path fill="#F3EDDD" d="M 50,14 Q 52,49 86,50 Q 52,51 50,86 Q 48,51 14,50 Q 48,49 50,14 Z"/>
+  </svg>
+</div>
+
+<!-- Attempt 2: Filled S path v1 -->
+<div class="swatch">
+  <span>S v1 — filled path</span>
+  <svg width="120" height="120" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#F3EDDD"/>
+    <path fill="#1A2A22" d="M 66,12 C 82,12 84,28 72,44 C 64,52 44,50 34,56 C 20,62 16,78 30,88 L 56,88 C 70,88 76,78 68,66 C 60,56 38,56 30,48 C 40,40 58,24 64,22 L 40,22 L 40,12 Z"/>
+    <path fill="#F3EDDD" d="M 50,24 Q 51,49 76,50 Q 51,51 50,76 Q 49,51 24,50 Q 49,49 50,24 Z"/>
+  </svg>
+</div>
+
+<!-- Attempt 3: Bolder S, rounder terminals -->
+<div class="swatch">
+  <span>S v2 — bold, rounder</span>
+  <svg width="120" height="120" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#F3EDDD"/>
+    <path fill="#1A2A22" d="
+      M 62,10
+      C 80,10 86,22 82,36
+      C 78,48 62,54 48,54
+      C 34,54 20,58 16,70
+      C 12,82 20,92 38,92
+      L 58,92
+      C 72,92 80,86 80,76
+      C 80,66 72,60 56,58
+      C 56,56 56,54 48,54
+      C 62,54 80,48 82,36
+      L 38,10 Z
+    "/>
+  </svg>
+</div>
+
+<!-- Attempt 4: Two-arc approach -->
+<div class="swatch">
+  <span>S v3 — two arcs</span>
+  <svg width="120" height="120" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#F3EDDD"/>
+    <!-- Upper arc: thick band going from lower-left to upper-right, bulging right -->
+    <path fill="#1A2A22" d="
+      M 32,52
+      C 18,52 12,38 16,26
+      C 20,14 34,8 50,8
+      L 68,8
+      C 82,8 88,16 84,28
+      C 80,40 66,48 50,48
+      L 50,52
+      C 66,52 82,46 82,34
+      L 82,26
+      C 82,18 76,12 66,12
+      L 50,12
+      C 36,12 24,18 22,28
+      C 20,38 26,48 36,48
+      Z
+    "/>
+    <!-- Lower arc: thick band going from upper-right to lower-left, bulging left -->
+    <path fill="#1A2A22" d="
+      M 68,52
+      C 80,52 86,64 82,74
+      C 78,86 64,92 48,92
+      L 32,92
+      C 18,92 12,84 16,72
+      C 20,60 34,52 50,52
+      L 50,48
+      C 34,48 18,56 16,70
+      C 12,84 20,96 36,96
+      L 52,96
+      C 66,96 80,90 82,78
+      C 84,66 78,56 66,56
+      Z
+    "/>
+  </svg>
+</div>
+
+<!-- Attempt 5: Star only — clean mark -->
+<div class="swatch">
+  <span>Star mark only</span>
+  <svg width="120" height="120" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#F3EDDD"/>
+    <path fill="#1A2A22" d="M 50,10 Q 52,48 90,50 Q 52,52 50,90 Q 48,52 10,50 Q 48,48 50,10 Z"/>
+  </svg>
+</div>
+
+<!-- Attempt 6: Star with rounded tips -->
+<div class="swatch">
+  <span>Star rounded</span>
+  <svg width="120" height="120" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#F3EDDD"/>
+    <path fill="#1A2A22" d="
+      M 50,12 Q 50,38 35,35 Q 12,50 35,65 Q 50,62 50,88 Q 50,62 65,65 Q 88,50 65,35 Q 50,38 50,12 Z
+    "/>
+  </svg>
+</div>
+
+<!-- Attempt 7: Smooth S using fill-rule evenodd trick -->
+<div class="swatch">
+  <span>S v4 — compound</span>
+  <svg width="120" height="120" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#F3EDDD"/>
+    <path fill="#1A2A22" fill-rule="evenodd" d="
+      M 50,8
+      C 72,8 86,18 86,32
+      C 86,46 74,54 50,54
+      C 26,54 14,62 14,76
+      C 14,90 28,94 50,94
+      C 68,94 80,88 80,78
+      L 68,78
+      C 68,84 60,88 50,88
+      C 32,88 26,82 26,76
+      C 26,70 32,60 50,60
+      C 74,60 98,50 98,32
+      C 98,16 80,2 50,2
+      C 26,2 8,10 8,24
+      L 20,24
+      C 20,16 32,8 50,8 Z
+
+      M 50,14
+      C 66,14 74,20 74,30
+      C 74,40 66,46 50,46
+      C 34,46 20,54 20,66
+      L 32,66
+      C 32,58 40,54 50,54
+      C 72,54 86,44 86,30
+      C 86,16 70,8 50,8
+      Z
+    "/>
+  </svg>
+</div>
+
+<!-- Attempt 8: FINAL — clean S from scratch -->
+<div class="swatch">
+  <span>S v5 — clean geometric</span>
+  <svg width="120" height="120" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#F3EDDD"/>
+    <path fill="#1A2A22" d="
+      M 64,14
+      C 80,14 84,24 80,34
+      C 76,44 60,50 44,50
+      C 28,50 16,56 14,68
+      C 12,80 22,88 40,88
+      L 60,88
+      C 74,88 82,82 84,72
+      L 72,72
+      C 70,78 66,82 58,82
+      L 42,82
+      C 28,82 24,76 26,70
+      C 28,62 40,56 56,56
+      C 72,56 86,50 86,36
+      C 86,22 76,8 58,8
+      L 40,8
+      C 28,8 18,14 16,24
+      L 28,24
+      C 30,18 34,14 42,14
+      Z
+    "/>
+    <path fill="#F3EDDD" d="M 50,28 Q 51,49 72,50 Q 51,51 50,72 Q 49,51 28,50 Q 49,49 50,28 Z"/>
+  </svg>
+</div>
+
+<!-- Small size previews (16px, 32px) -->
+<div class="swatch" style="margin-top:20px">
+  <span>v5 at real sizes</span>
+  <div style="display:flex;gap:12px;align-items:flex-end">
+    <svg width="16" height="16" viewBox="0 0 100 100"><rect width="100" height="100" fill="#F3EDDD"/><path fill="#1A2A22" d="M 64,14 C 80,14 84,24 80,34 C 76,44 60,50 44,50 C 28,50 16,56 14,68 C 12,80 22,88 40,88 L 60,88 C 74,88 82,82 84,72 L 72,72 C 70,78 66,82 58,82 L 42,82 C 28,82 24,76 26,70 C 28,62 40,56 56,56 C 72,56 86,50 86,36 C 86,22 76,8 58,8 L 40,8 C 28,8 18,14 16,24 L 28,24 C 30,18 34,14 42,14 Z"/><path fill="#F3EDDD" d="M 50,28 Q 51,49 72,50 Q 51,51 50,72 Q 49,51 28,50 Q 49,49 50,28 Z"/></svg>
+    <svg width="32" height="32" viewBox="0 0 100 100"><rect width="100" height="100" fill="#F3EDDD"/><path fill="#1A2A22" d="M 64,14 C 80,14 84,24 80,34 C 76,44 60,50 44,50 C 28,50 16,56 14,68 C 12,80 22,88 40,88 L 60,88 C 74,88 82,82 84,72 L 72,72 C 70,78 66,82 58,82 L 42,82 C 28,82 24,76 26,70 C 28,62 40,56 56,56 C 72,56 86,50 86,36 C 86,22 76,8 58,8 L 40,8 C 28,8 18,14 16,24 L 28,24 C 30,18 34,14 42,14 Z"/><path fill="#F3EDDD" d="M 50,28 Q 51,49 72,50 Q 51,51 50,72 Q 49,51 28,50 Q 49,49 50,28 Z"/></svg>
+    <svg width="48" height="48" viewBox="0 0 100 100"><rect width="100" height="100" fill="#F3EDDD"/><path fill="#1A2A22" d="M 64,14 C 80,14 84,24 80,34 C 76,44 60,50 44,50 C 28,50 16,56 14,68 C 12,80 22,88 40,88 L 60,88 C 74,88 82,82 84,72 L 72,72 C 70,78 66,82 58,82 L 42,82 C 28,82 24,76 26,70 C 28,62 40,56 56,56 C 72,56 86,50 86,36 C 86,22 76,8 58,8 L 40,8 C 28,8 18,14 16,24 L 28,24 C 30,18 34,14 42,14 Z"/><path fill="#F3EDDD" d="M 50,28 Q 51,49 72,50 Q 51,51 50,72 Q 49,51 28,50 Q 49,49 50,28 Z"/></svg>
+    <svg width="128" height="128" viewBox="0 0 100 100"><rect width="100" height="100" fill="#F3EDDD"/><path fill="#1A2A22" d="M 64,14 C 80,14 84,24 80,34 C 76,44 60,50 44,50 C 28,50 16,56 14,68 C 12,80 22,88 40,88 L 60,88 C 74,88 82,82 84,72 L 72,72 C 70,78 66,82 58,82 L 42,82 C 28,82 24,76 26,70 C 28,62 40,56 56,56 C 72,56 86,50 86,36 C 86,22 76,8 58,8 L 40,8 C 28,8 18,14 16,24 L 28,24 C 30,18 34,14 42,14 Z"/><path fill="#F3EDDD" d="M 50,28 Q 51,49 72,50 Q 51,51 50,72 Q 49,51 28,50 Q 49,49 50,28 Z"/></svg>
+  </div>
+</div>
+
+<!-- Dark bg version -->
+<div class="swatch dark">
+  <span style="color:#F3EDDD">v5 inverted (footer)</span>
+  <svg width="120" height="120" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#1A2A22"/>
+    <path fill="#F3EDDD" d="M 64,14 C 80,14 84,24 80,34 C 76,44 60,50 44,50 C 28,50 16,56 14,68 C 12,80 22,88 40,88 L 60,88 C 74,88 82,82 84,72 L 72,72 C 70,78 66,82 58,82 L 42,82 C 28,82 24,76 26,70 C 28,62 40,56 56,56 C 72,56 86,50 86,36 C 86,22 76,8 58,8 L 40,8 C 28,8 18,14 16,24 L 28,24 C 30,18 34,14 42,14 Z"/>
+    <path fill="#1A2A22" d="M 50,28 Q 51,49 72,50 Q 51,51 50,72 Q 49,51 28,50 Q 49,49 50,28 Z"/>
+  </svg>
+</div>
+
+<!-- v5 wordmark context -->
+<div class="swatch">
+  <span>With wordmark</span>
+  <div style="display:flex;align-items:center;gap:8px;font-family:Georgia,serif;font-size:20px;color:#1A2A22;font-weight:500">
+    <svg width="28" height="28" viewBox="0 0 100 100"><rect width="100" height="100" fill="#F3EDDD"/><path fill="#1A2A22" d="M 64,14 C 80,14 84,24 80,34 C 76,44 60,50 44,50 C 28,50 16,56 14,68 C 12,80 22,88 40,88 L 60,88 C 74,88 82,82 84,72 L 72,72 C 70,78 66,82 58,82 L 42,82 C 28,82 24,76 26,70 C 28,62 40,56 56,56 C 72,56 86,50 86,36 C 86,22 76,8 58,8 L 40,8 C 28,8 18,14 16,24 L 28,24 C 30,18 34,14 42,14 Z"/><path fill="#F3EDDD" d="M 50,28 Q 51,49 72,50 Q 51,51 50,72 Q 49,51 28,50 Q 49,49 50,28 Z"/></svg>
+    Sentra
+  </div>
+</div>
+
+</body>
+</html>
