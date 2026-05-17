@@ -193,7 +193,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 })
 
 // ── Periodic flush ────────────────────────────────────────────────────────────
-chrome.alarms.create('flush', { periodInMinutes: 1 })
+chrome.alarms.create('flush', { periodInMinutes: 5 })
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'flush') flushQueue()
 })

@@ -131,7 +131,10 @@ router.post('/resend-consent', async (req, res) => {
       .run(consentToken, user.id)
     setImmediate(() => sendConsentEmail({ name: user.name, email: user.email, consentToken }))
     res.json({ ok: true })
-  } catch {
+  } catch (err) {
+    if (err.name !== 'JsonWebTokenError' && err.name !== 'TokenExpiredError') {
+      console.error('[resend-consent]', err.message)
+    }
     res.status(401).json({ error: 'Session expired.' })
   }
 })

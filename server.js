@@ -33,13 +33,14 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  const appOrigin = process.env.APP_URL || 'https://sentra-peach-delta.vercel.app'
   res.setHeader('Content-Security-Policy',
     "default-src 'self'; " +
     "script-src 'self' https://cdn.jsdelivr.net; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "font-src https://fonts.gstatic.com; " +
     "img-src 'self' data: https:; " +
-    "connect-src 'self' https://sentra-peach-delta.vercel.app https://api.qrserver.com")
+    `connect-src 'self' ${appOrigin} https://api.qrserver.com`)
   next()
 })
 app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }))
@@ -191,7 +192,8 @@ app.get('/install/:token', async (req, res) => {
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script>
-    QRCode.toDataURL('sentra-token:${device_token}', {
+    var TOKEN = ${JSON.stringify('sentra-token:' + device_token)}
+    QRCode.toDataURL(TOKEN, {
       width: 100, margin: 1,
       color: { dark: '#1A2A22', light: '#FBF7EB' }
     }, function(err, url) {
@@ -201,12 +203,12 @@ app.get('/install/:token', async (req, res) => {
         // fallback: external QR API
         document.getElementById('qr-img').src =
           'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' +
-          encodeURIComponent('sentra-token:${device_token}')
+          encodeURIComponent(TOKEN)
       }
     })
 
     document.getElementById('copy-btn').addEventListener('click', () => {
-      navigator.clipboard.writeText('${device_token}').then(() => {
+      navigator.clipboard.writeText(${JSON.stringify(device_token)}).then(() => {
         const btn = document.getElementById('copy-btn')
         btn.textContent = 'Copied!'
         setTimeout(() => { btn.textContent = 'Copy token' }, 2500)
