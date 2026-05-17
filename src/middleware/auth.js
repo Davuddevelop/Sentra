@@ -14,7 +14,10 @@ export async function requireAuth(req, res, next) {
     if (!user) return res.status(401).json({ error: 'User not found.' })
     req.user = user
     next()
-  } catch {
+  } catch (err) {
+    if (err.name !== 'JsonWebTokenError' && err.name !== 'TokenExpiredError') {
+      console.error('[auth]', err.message)
+    }
     res.status(401).json({ error: 'Session expired. Please log in again.' })
   }
 }

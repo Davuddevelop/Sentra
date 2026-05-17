@@ -14,7 +14,9 @@ try {
   await client.execute('PRAGMA foreign_keys = ON')
   await client.execute('PRAGMA cache_size = -20000')  // 20MB page cache
   await client.execute('PRAGMA synchronous = NORMAL')  // faster writes, safe with WAL
-} catch {}
+} catch (err) {
+  console.warn('[db] PRAGMA setup warning:', err.message)
+}
 
 const TABLES = [
   `CREATE TABLE IF NOT EXISTS waitlist (

@@ -154,7 +154,7 @@ async function handleMessage(msg, tabId) {
       }
 
       await deleteSession(tabId)
-      flushQueue()
+      await flushQueue()
       break
     }
 

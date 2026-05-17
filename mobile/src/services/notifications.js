@@ -33,9 +33,13 @@ export async function registerPushToken() {
     })
   }
 
-  const { data: pushToken } = await Notifications.getExpoPushTokenAsync({
-    projectId: 'your-expo-project-id', // replace with actual Expo project ID
-  })
+  const { Constants } = await import('expo-constants')
+  const projectId = Constants.expoConfig?.extra?.expoProjectId ?? Constants.easConfig?.projectId
+  if (!projectId) {
+    console.warn('[push] expoProjectId not set — add it to app.json extra.expoProjectId')
+    return null
+  }
+  const { data: pushToken } = await Notifications.getExpoPushTokenAsync({ projectId })
 
   // Register token with backend so it can push to this parent device
   const deviceToken = await getToken()
