@@ -14,7 +14,8 @@ Rules:
 - Always return valid JSON only, no markdown, no code fences`
 
 export async function generateInsights({ childName, childAge, typeCounts, criticalCount, warnCount, totalSignals }) {
-  if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-...')) return null
+  const key = process.env.ANTHROPIC_API_KEY
+  if (!key || key.length < 20 || key.includes('...')) return null
   if (totalSignals === 0) return null
   try {
     const msg = await client.messages.create({

@@ -32,7 +32,8 @@ Return this exact JSON shape:
 }`
 
 export async function analyzeSignal(type, payload = {}, context = {}) {
-  if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-...')) {
+  const key = process.env.ANTHROPIC_API_KEY
+  if (!key || key.length < 20 || key.includes('...')) {
     return null // fall back to rule-based scoring
   }
 

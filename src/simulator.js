@@ -2,8 +2,8 @@ import db from './db/schema.js'
 import crypto from 'crypto'
 import bcrypt from 'bcrypt'
 
-const DEMO_EMAIL    = 'demo@sentra.app'
-const DEMO_PASSWORD = 'sentra-demo-2025'
+const DEMO_EMAIL    = process.env.DEMO_EMAIL    || 'demo@sentra.app'
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'sentra-demo-2025'
 
 const SCENARIOS = [
   { type: 'ai.emotional_dependency', payload: { app: 'Character.AI', session_minutes: 180, sessions_today: 6 }, title: 'Long Character.AI session detected', body: 'Emma has spent 3+ hours in a single Character.AI session today.' },

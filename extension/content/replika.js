@@ -14,23 +14,27 @@
 
   let messageCount = 0
 
-  // Replika is an emotional companion app — fire romantic pattern signal on any session start
-  // (the act of using Replika in a romantic context is the signal, not specific messages)
+  // Replika is an emotional companion app — fire romantic pattern after 5 min of ACTIVE use
+  // (only if the user sent at least one message, to avoid false alerts for idle tabs)
   setTimeout(() => {
-    chrome.runtime.sendMessage({
-      type: 'ROMANTIC_PATTERN',
-      app: APP,
-      frequency: 'detected',
-    })
-  }, 5 * 60 * 1000) // after 5 min of active use
+    if (messageCount > 0) {
+      chrome.runtime.sendMessage({
+        type: 'ROMANTIC_PATTERN',
+        app: APP,
+        frequency: 'detected',
+      })
+    }
+  }, 5 * 60 * 1000)
 
-  // Dependency signal after 20 min
+  // Dependency signal after 20 min of active messaging
   setTimeout(() => {
-    chrome.runtime.sendMessage({
-      type: 'EMOTIONAL_DEPENDENCY',
-      app: APP,
-      sessionsToday: 1,
-    })
+    if (messageCount > 0) {
+      chrome.runtime.sendMessage({
+        type: 'EMOTIONAL_DEPENDENCY',
+        app: APP,
+        sessionsToday: 1,
+      })
+    }
   }, 20 * 60 * 1000)
 
   function getInput() {
