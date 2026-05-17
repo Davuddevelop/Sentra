@@ -5,7 +5,7 @@ import {
   Platform, ScrollView, Linking,
 } from 'react-native'
 import { T } from '../theme'
-import { saveToken, verifyToken } from '../services/api'
+import { saveToken, verifyToken, API_BASE } from '../services/api'
 
 export default function PairingScreen({ onPaired }) {
   const [token,  setToken]  = useState('')
@@ -75,7 +75,7 @@ export default function PairingScreen({ onPaired }) {
           </Text>
         </View>
 
-        <TouchableOpacity onPress={() => Linking.openURL('https://sentra.app/privacy')}>
+        <TouchableOpacity onPress={() => Linking.openURL(`${API_BASE}/privacy`)}>
           <Text style={s.privacy}>Privacy policy — we never read message content</Text>
         </TouchableOpacity>
 

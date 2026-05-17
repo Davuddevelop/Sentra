@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const API_BASE = 'https://sentra-peach-delta.vercel.app'
+export const API_BASE = 'https://sentra-peach-delta.vercel.app'
 
 export async function getToken() {
   return AsyncStorage.getItem('deviceToken')
@@ -30,7 +30,8 @@ const QUEUE_KEY = 'signalQueue'
 
 export async function enqueueSignal(type, payload) {
   const raw = await AsyncStorage.getItem(QUEUE_KEY)
-  const queue = raw ? JSON.parse(raw) : []
+  let queue = []
+  try { queue = raw ? JSON.parse(raw) : [] } catch { queue = [] }
   queue.push({ type, payload, ts: Date.now() })
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
 }
@@ -41,22 +42,33 @@ export async function flushSignals() {
 
   const raw = await AsyncStorage.getItem(QUEUE_KEY)
   if (!raw) return
-  const queue = JSON.parse(raw)
+  let queue = []
+  try { queue = JSON.parse(raw) } catch { return }
   if (!queue.length) return
 
-  await AsyncStorage.setItem(QUEUE_KEY, '[]')
-
+  // Send signals one at a time WITHOUT clearing the queue first.
+  // Only remove each signal after it's confirmed sent, so a mid-flush
+  // crash or network failure doesn't lose unsent signals.
+  let sentCount = 0
   for (const signal of queue) {
     try {
-      await fetch(`${API_BASE}/api/signal`, {
+      const res = await fetch(`${API_BASE}/api/signal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Device-Token': token },
         body: JSON.stringify({ type: signal.type, payload: signal.payload }),
       })
+      if (!res.ok) break
+      sentCount++
     } catch {
-      // Re-queue failed signals
-      await enqueueSignal(signal.type, signal.payload)
       break
     }
+  }
+
+  if (sentCount > 0) {
+    // Slice from the live queue so signals enqueued during flush are preserved.
+    const live = await AsyncStorage.getItem(QUEUE_KEY)
+    let liveQueue = []
+    try { liveQueue = live ? JSON.parse(live) : [] } catch { liveQueue = [] }
+    await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(liveQueue.slice(sentCount)))
   }
 }

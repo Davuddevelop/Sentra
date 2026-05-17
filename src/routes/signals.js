@@ -93,15 +93,14 @@ router.post('/signal', signalLimiter, async (req, res) => {
   const title     = ai?.title ?? payload.title ?? `${category} signal on ${row.device_name}`
   const body      = ai?.body  ?? payload.body  ?? `Signal type: ${type}`
 
-  // Batch the two writes into one round-trip where possible
   let signalId
   try {
-    const [insertResult] = await Promise.all([
-      db.prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed) VALUES (?, ?, ?, ?, 1)')
-        .run(row.device_id, type, JSON.stringify(payload), riskScore),
-      db.prepare('UPDATE devices SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(row.device_id),
-    ])
+    const insertResult = await db
+      .prepare('INSERT INTO signals (device_id, type, payload, risk_score, processed) VALUES (?, ?, ?, ?, 1)')
+      .run(row.device_id, type, JSON.stringify(payload), riskScore)
     signalId = insertResult.lastInsertRowid
+    // Fire-and-forget — last_seen update is non-critical
+    db.prepare('UPDATE devices SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(row.device_id).catch(() => null)
   } catch (err) {
     console.error('[signals] DB write failed:', err.message)
     return res.status(500).json({ error: 'Failed to record signal.' })
@@ -120,7 +119,7 @@ router.post('/signal', signalLimiter, async (req, res) => {
         // How many times has this signal type fired in the last 7 days?
         const recentRow = await db.prepare(
           `SELECT COUNT(*) as count FROM signals WHERE device_id = ? AND type = ? AND created_at > datetime('now', '-7 days')`
-        ).get(row.device_id, type).catch(() => null)
+        ).get(row.device_id, type).catch(err => { console.error('[signals] recentRow query failed:', err.message); return null })
         const recentCount = recentRow?.count ?? 1
 
         // GuidanceAgent: generates parent-facing explanation + action + conversation starter

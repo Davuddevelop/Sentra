@@ -89,7 +89,7 @@ document.getElementById('savePinBtn').addEventListener('click', async () => {
   const pin     = document.getElementById('pinSetInput').value.trim()
   const confirm = document.getElementById('pinConfirmInput').value.trim()
 
-  if (!pin || pin.length < 4) {
+  if (!pin || pin.length < 4 || pin.length > 6) {
     showToast('pin-set-toast', 'PIN must be 4–6 digits.', 'error'); return
   }
   if (!/^\d+$/.test(pin)) {

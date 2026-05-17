@@ -5,6 +5,9 @@ import { requireAuth } from '../middleware/auth.js'
 import { PLAN_LIMITS } from '../config/plans.js'
 
 const router  = Router()
+if (!process.env.STRIPE_SECRET_KEY && process.env.NODE_ENV === 'production') {
+  throw new Error('STRIPE_SECRET_KEY is required in production')
+}
 const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder')
 const APP_URL = process.env.APP_URL || 'http://localhost:5173'
 
@@ -84,9 +87,13 @@ router.post('/webhook', async (req, res) => {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object
-      const userId  = parseInt(session.metadata?.sentra_user_id)
+      const userId  = parseInt(session.metadata?.sentra_user_id, 10)
       const plan    = session.metadata?.plan
-      if (userId && plan) {
+      if (!Number.isInteger(userId) || userId <= 0) {
+        console.error('[billing] checkout.session.completed: invalid userId in metadata', session.metadata)
+        break
+      }
+      if (plan) {
         await db.prepare('UPDATE users SET plan = ?, plan_status = ?, stripe_sub_id = ? WHERE id = ?')
           .run(plan, 'active', session.subscription, userId)
       }
@@ -95,20 +102,28 @@ router.post('/webhook', async (req, res) => {
     case 'customer.subscription.deleted':
     case 'customer.subscription.paused': {
       const sub    = event.data.object
-      const userId = parseInt(sub.metadata?.sentra_user_id)
-      if (userId) {
-        await db.prepare('UPDATE users SET plan = ?, plan_status = ? WHERE id = ?')
-          .run('starter', event.type === 'customer.subscription.paused' ? 'paused' : 'cancelled', userId)
+      const userId = parseInt(sub.metadata?.sentra_user_id, 10)
+      if (!Number.isInteger(userId) || userId <= 0) {
+        console.error('[billing] subscription event: invalid userId in metadata', sub.metadata)
+        break
       }
+      await db.prepare('UPDATE users SET plan = ?, plan_status = ? WHERE id = ?')
+        .run('starter', event.type === 'customer.subscription.paused' ? 'paused' : 'cancelled', userId)
       break
     }
     case 'customer.subscription.updated': {
       const sub    = event.data.object
-      const userId = parseInt(sub.metadata?.sentra_user_id)
+      const userId = parseInt(sub.metadata?.sentra_user_id, 10)
       const plan   = sub.metadata?.plan
-      if (userId && plan) {
+      if (!Number.isInteger(userId) || userId <= 0) {
+        console.error('[billing] subscription.updated: invalid userId in metadata', sub.metadata)
+        break
+      }
+      const VALID_DB_STATUSES = ['active', 'paused', 'cancelled', 'past_due', 'unpaid']
+      const planStatus = VALID_DB_STATUSES.includes(sub.status) ? sub.status : 'active'
+      if (plan) {
         await db.prepare('UPDATE users SET plan = ?, plan_status = ? WHERE id = ?')
-          .run(plan, sub.status === 'active' ? 'active' : sub.status, userId)
+          .run(plan, planStatus, userId)
       }
       break
     }

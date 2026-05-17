@@ -24,7 +24,7 @@
     { pattern: /how (to make|to build).*(weapon|explosive|bomb)/i,       category: 'weapon' },
     { pattern: /how (to get|to buy).*(drugs|weed|xanax)/i,              category: 'substances' },
     { pattern: /how (to run away|to escape home)/i,                      category: 'runaway' },
-    { pattern: /self.harm|cut myself|hurt myself/i,                      category: 'self_harm' },
+    { pattern: /self[\s-]?harm|cut myself|hurt myself/i,                  category: 'self_harm' },
   ]
 
   function onMessageSend(el) {

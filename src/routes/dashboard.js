@@ -1,9 +1,19 @@
 import { Router } from 'express'
 import crypto from 'crypto'
+import rateLimit from 'express-rate-limit'
 import { requireAuth, requireFamily } from '../middleware/auth.js'
 import db from '../db/schema.js'
 import { PLAN_LIMITS } from '../config/plans.js'
 import { sendInstallLinkEmail } from '../services/email.js'
+
+const installTokenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  keyGenerator: req => req.params.token || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests.' },
+})
 
 const router = Router()
 
@@ -38,7 +48,7 @@ router.post('/family/child', requireAuth, requireFamily, async (req, res) => {
 
   const { lastInsertRowid: childId } = await db
     .prepare('INSERT INTO children (family_id, name, age) VALUES (?, ?, ?)')
-    .run(req.family.id, name.trim(), age ? parseInt(age) : null)
+    .run(req.family.id, name.trim(), age ? parseInt(age, 10) : null)
 
   const child = await db.prepare('SELECT * FROM children WHERE id = ?').get(childId)
   res.status(201).json({ ok: true, child })
@@ -46,10 +56,10 @@ router.post('/family/child', requireAuth, requireFamily, async (req, res) => {
 
 /* ── GET /api/alerts ─────────────────────────────────────── */
 router.get('/alerts', requireAuth, requireFamily, async (req, res) => {
-  const limit      = Math.min(parseInt(req.query.limit)  || 20, 100)
-  const offset     = parseInt(req.query.offset) || 0
-  const days       = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 30)
-  const childId    = req.query.child_id ? parseInt(req.query.child_id) : null
+  const limit      = Math.min(parseInt(req.query.limit,  10) || 20, 100)
+  const offset     = parseInt(req.query.offset, 10) || 0
+  const days       = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 30)
+  const childId    = req.query.child_id ? parseInt(req.query.child_id, 10) : null
   const VALID_LEVELS = ['critical', 'warn', 'info', 'ok']
   const level      = VALID_LEVELS.includes(req.query.level) ? req.query.level : null
   const unreadOnly = req.query.unread === 'true'
@@ -165,7 +175,7 @@ router.post('/family/send-install-email', requireAuth, requireFamily, async (req
 })
 
 /* ── GET /api/install/:token ─────────────────────────────── */
-router.get('/install/:token', async (req, res) => {
+router.get('/install/:token', installTokenLimiter, async (req, res) => {
   const row = await db.prepare(`
     SELECT it.token, d.device_token, d.name as device_name, c.name as child_name
     FROM install_tokens it
@@ -186,8 +196,8 @@ router.patch('/alerts/:id/read', requireAuth, requireFamily, async (req, res) =>
 
 /* ── GET /api/activity ───────────────────────────────────── */
 router.get('/activity', requireAuth, requireFamily, async (req, res) => {
-  const days    = Math.min(Math.max(parseInt(req.query.days) || 7, 1), 30)
-  const childId = req.query.child_id ? parseInt(req.query.child_id) : null
+  const days    = Math.min(Math.max(parseInt(req.query.days, 10) || 7, 1), 30)
+  const childId = req.query.child_id ? parseInt(req.query.child_id, 10) : null
   const VALID_LEVELS = ['critical', 'warn', 'info', 'ok']
   const level   = VALID_LEVELS.includes(req.query.level) ? req.query.level : null
 

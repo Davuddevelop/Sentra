@@ -16,9 +16,10 @@
 import { AppState } from 'react-native'
 import { enqueueSignal, flushSignals } from './api'
 
-let sessionStartMs  = null
-let flushInterval   = null
-let appStateSub     = null
+let sessionStartMs      = null
+let flushInterval       = null
+let appStateSub         = null
+let lateNightFiredHour  = -1 // tracks which clock-hour we last fired late_night to prevent duplicates
 
 const LATE_NIGHT_START = 23 // 11pm
 const LATE_NIGHT_END   = 6  // 6am
@@ -29,27 +30,27 @@ function isLateNight() {
   return h >= LATE_NIGHT_START || h < LATE_NIGHT_END
 }
 
-export function startMonitor(platform) {
-  sessionStartMs = Date.now()
-
-  // Late-night check on session start
-  if (isLateNight()) {
+function maybeLateNight(platform) {
+  const h = new Date().getHours()
+  if (isLateNight() && h !== lateNightFiredHour) {
+    lateNightFiredHour = h
     enqueueSignal('screen.late_night', {
       platform,
       start_time: new Date().toISOString().slice(11, 16),
     })
   }
+}
 
-  // AppState: detect when app comes back to foreground after being backgrounded
+export function startMonitor(platform) {
+  sessionStartMs = Date.now()
+
+  // AppState: detect foreground/background transitions.
+  // Late-night is only fired here (on transitions), not on initial startMonitor(),
+  // to avoid a duplicate signal when the app first loads in an already-active state.
   appStateSub = AppState.addEventListener('change', (state) => {
     if (state === 'active') {
       sessionStartMs = Date.now()
-      if (isLateNight()) {
-        enqueueSignal('screen.late_night', {
-          platform,
-          start_time: new Date().toISOString().slice(11, 16),
-        })
-      }
+      maybeLateNight(platform)
     }
     if (state === 'background') {
       checkExcessive(platform)
@@ -78,6 +79,6 @@ function checkExcessive(platform) {
       total_hours: +(mins / 60).toFixed(1),
       day: new Date().toLocaleDateString('en-US', { weekday: 'short' }),
     })
-    sessionStartMs = Date.now() // reset so we don't re-fire every minute
+    sessionStartMs = Date.now() // slide the window forward — fires again only after another 90 min of continuous use
   }
 }

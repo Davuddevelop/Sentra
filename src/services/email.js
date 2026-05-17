@@ -230,7 +230,7 @@ export async function sendAlertEmail({ parentName, parentEmail, childName, alert
 }
 
 export async function sendConsentEmail({ name, email, consentToken }) {
-  const appUrl  = process.env.APP_URL || 'http://localhost:3001'
+  const appUrl  = process.env.APP_URL || 'http://localhost:5173'
   const verifyUrl = `${appUrl}/api/auth/verify-consent?token=${consentToken}`
   try {
     await sendEmail({

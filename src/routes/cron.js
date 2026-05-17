@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { timingSafeEqual } from 'crypto'
 import db from '../db/schema.js'
 import { sendWeeklyDigest } from '../services/email.js'
 import { generateInsights } from '../agents/insights.js'
@@ -12,7 +13,11 @@ function verifyCron(req, res, next) {
     console.error('[cron] CRON_SECRET not configured — rejecting request')
     return res.status(500).json({ error: 'Cron not configured' })
   }
-  if (req.headers.authorization !== `Bearer ${secret}`) {
+  const provided = req.headers.authorization ?? ''
+  const expected = `Bearer ${secret}`
+  const match = provided.length === expected.length &&
+    timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
+  if (!match) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
   next()

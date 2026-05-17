@@ -29,7 +29,8 @@ Return exactly this JSON:
 }`
 
 export async function generateGuidance({ type, level, title, childAge, platform, recentCount }) {
-  if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-...')) return null
+  const key = process.env.ANTHROPIC_API_KEY
+  if (!key || key.length < 20 || key.includes('...')) return null
   try {
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',

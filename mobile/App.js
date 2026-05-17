@@ -23,7 +23,7 @@ export default function App() {
         const data = await verifyToken(token)
         setInfo({ token, deviceName: data.device_name, childName: data.child_name })
         // Show setup screen only once — after first successful pairing
-        const setupDone = await AsyncStorage.getItem('setupDone').catch(() => null)
+        const setupDone = await AsyncStorage.getItem('setupDone')
         setState(setupDone ? 'paired' : 'setup')
       } catch {
         setState('unpaired')
