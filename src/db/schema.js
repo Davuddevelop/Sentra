@@ -104,6 +104,15 @@ const TABLES = [
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE INDEX IF NOT EXISTS idx_install_tokens ON install_tokens(token, expires_at)`,
+  `CREATE TABLE IF NOT EXISTS consent_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event      TEXT NOT NULL,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_consent_log_user ON consent_log(user_id, created_at DESC)`,
 ]
 
 for (const sql of TABLES) {
