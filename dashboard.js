@@ -830,13 +830,16 @@ async function initWeeklyView() {
   $('#weekly-date-range').textContent = `${fmt(start)} – ${fmt(now)}, ${now.getFullYear()}`
 
   try {
-    const data = await api('/activity?days=7')
+    const raw = await api('/activity?days=7')
+    const byLevel = raw.byLevel ?? []
+    const byDay   = raw.byDay   ?? []
+    const byChild = raw.byChild ?? []
 
     // Stat cards
-    const total    = data.byLevel.reduce((s, d) => s + d.count, 0)
-    const critical = data.byLevel.find(d => d.level === 'critical')?.count || 0
-    const warn     = data.byLevel.find(d => d.level === 'warn')?.count || 0
-    const info     = data.byLevel.find(d => d.level === 'info')?.count || 0
+    const total    = byLevel.reduce((s, d) => s + d.count, 0)
+    const critical = byLevel.find(d => d.level === 'critical')?.count || 0
+    const warn     = byLevel.find(d => d.level === 'warn')?.count || 0
+    const info     = byLevel.find(d => d.level === 'info')?.count || 0
 
     $('#weekly-stats').innerHTML = `
       <div class="stat-card"><div class="stat-label">Total signals</div><div class="stat-num">${total}</div><div class="stat-sub">this week</div></div>
@@ -846,9 +849,9 @@ async function initWeeklyView() {
     `
 
     // Risk line chart — shows per-child risk score trend across 7 days
-    const datasets = data.byChild.map((c, i) => ({
+    const datasets = byChild.map((c, i) => ({
       label: c.name,
-      data: data.byDay.map(d => {
+      data: byDay.map(d => {
         // Simple risk heuristic: critical=20, warn=10, info=3
         return d.critical * 20 + d.warn * 10 + d.info * 3
       }),
@@ -864,7 +867,7 @@ async function initWeeklyView() {
     mkChart('chart-weekly-trend', {
       type: 'line',
       data: {
-        labels: data.byDay.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })),
+        labels: byDay.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })),
         datasets
       },
       options: {
@@ -881,10 +884,10 @@ async function initWeeklyView() {
     mkChart('chart-weekly-dist', {
       type: 'doughnut',
       data: {
-        labels: data.byLevel.map(l => l.level.toUpperCase()),
+        labels: byLevel.map(l => l.level.toUpperCase()),
         datasets: [{
-          data: data.byLevel.map(l => l.count),
-          backgroundColor: data.byLevel.map(l => LEVEL_COLOR[l.level] || '#9CA3AF'),
+          data: byLevel.map(l => l.count),
+          backgroundColor: byLevel.map(l => LEVEL_COLOR[l.level] || '#9CA3AF'),
           borderWidth: 3,
           borderColor: '#FBF7EB',
           hoverOffset: 8,
@@ -898,11 +901,11 @@ async function initWeeklyView() {
 
     // Per-child breakdown
     const childEl = $('#weekly-children')
-    if (!data.byChild.length) {
+    if (!byChild.length) {
       childEl.innerHTML = '<div class="empty-state">No activity this week.</div>'
     } else {
-      const maxCount = Math.max(...data.byChild.map(c => c.count), 1)
-      childEl.innerHTML = data.byChild.map(c => {
+      const maxCount = Math.max(...byChild.map(c => c.count), 1)
+      childEl.innerHTML = byChild.map(c => {
         const pct = Math.round((c.count / maxCount) * 100)
         const color = c.critical > 0 ? '#C85A2E' : c.warn > 0 ? '#D97706' : '#2C5A3F'
         return `
