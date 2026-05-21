@@ -309,11 +309,40 @@ router.get('/stats', requireAuth, requireFamily, async (req, res) => {
 })
 
 /* ── POST /api/push/register ─────────────────────────────── */
-router.post('/push/register', requireAuth, async (req, res) => {
+// Accepts either JWT auth (web) or X-Device-Token header (mobile child device → look up parent)
+router.post('/push/register', async (req, res) => {
   const { push_token } = req.body ?? {}
-  if (!push_token) return res.status(400).json({ error: 'push_token required.' })
-  await db.prepare('UPDATE users SET push_token = ? WHERE id = ?').run(push_token, req.user.id)
-  res.json({ ok: true })
+  if (!push_token || !push_token.startsWith('ExponentPushToken')) {
+    return res.status(400).json({ error: 'Valid Expo push_token required.' })
+  }
+
+  const deviceToken = req.headers['x-device-token']
+  if (deviceToken) {
+    // Mobile path: look up parent owner via device token
+    const row = await db.prepare(`
+      SELECT u.id FROM devices d
+      JOIN children c ON c.id = d.child_id
+      JOIN families f ON f.id = c.family_id
+      JOIN users    u ON u.id = f.owner_id
+      WHERE d.device_token = ?
+    `).get(deviceToken)
+    if (!row) return res.status(401).json({ error: 'Unknown device.' })
+    await db.prepare('UPDATE users SET push_token = ? WHERE id = ?').run(push_token, row.id)
+    return res.json({ ok: true })
+  }
+
+  // Web path: require JWT
+  const cookieToken = req.cookies?.token
+  if (!cookieToken) return res.status(401).json({ error: 'Authentication required.' })
+  try {
+    const jwt = await import('jsonwebtoken')
+    const JWT_SECRET = process.env.JWT_SECRET
+    const payload = jwt.default.verify(cookieToken, JWT_SECRET, { algorithms: ['HS256'] })
+    await db.prepare('UPDATE users SET push_token = ? WHERE id = ?').run(push_token, payload.id)
+    res.json({ ok: true })
+  } catch {
+    res.status(401).json({ error: 'Session expired.' })
+  }
 })
 
 /* ── POST /api/family/co-owner ───────────────────────────── */
