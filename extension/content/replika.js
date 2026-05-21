@@ -1,7 +1,7 @@
 /**
  * Sentra — Replika content script
  * Replika is specifically designed for emotional companionship — higher baseline risk.
- * Monitors: session duration, message frequency (not content)
+ * Monitors: session duration, message frequency, crisis language (full text, on-device only)
  */
 
 ;(function () {
@@ -13,6 +13,17 @@
   chrome.runtime.sendMessage({ type: 'SESSION_START', app: APP })
 
   let messageCount = 0
+
+  // Crisis patterns — checked against full message text on-device, content never sent to server
+  const CRISIS_PATTERNS = [
+    /\b(want to die|wanna die|i want to be dead)\b/i,
+    /\b(kill myself|end my life|end it all|ending it all)\b/i,
+    /\bsuicidal\b/i,
+    /\b(i'?m|i am) going to (kill|hurt) myself\b/i,
+    /\bdon'?t want to (live|be alive|exist)\b/i,
+    /\bcutting (myself|my wrists|my arms)\b/i,
+    /\bhope (i die|i don'?t wake up|to not wake up)\b/i,
+  ]
 
   // Replika is an emotional companion app — fire romantic pattern after 5 min of ACTIVE use
   // (only if the user sent at least one message, to avoid false alerts for idle tabs)
@@ -52,13 +63,20 @@
 
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
+        const text = input.value || input.innerText || ''
         messageCount++
+
         chrome.runtime.sendMessage({
           type: 'MESSAGE_SENT',
           app: APP,
-          textLength: (input.value || input.innerText || '').length,
+          textLength: text.length,
           firstChars: '',
         })
+
+        // Crisis detection — on-device only, no content sent
+        if (CRISIS_PATTERNS.some(p => p.test(text.toLowerCase()))) {
+          chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'crisis', urgent: true })
+        }
       }
     })
   }

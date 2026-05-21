@@ -18,26 +18,37 @@ const signalLimiter = rateLimit({
 })
 
 const RULE_SCORES = {
-  'ai.romantic_roleplay':    85,
-  'ai.jailbreak_attempt':    80,
-  'ai.harmful_advice':       90,
-  'ai.emotional_dependency': 60,
-  'contact.unknown_dm':      70,
-  'contact.off_platform':    75,
-  'content.graphic':         88,
-  'content.deepfake':        92,
-  'screen.late_night':       40,
-  'screen.excessive':        35,
-  'privacy.data_shared':     65,
-  'app.new_install':         20,
-  'app.scan_clean':          0,
-  'app.foreground':          5,
-  'app.tamper_detected':     95,
+  // Mental health — crisis tier (always critical, bypass AI analyzer)
+  'mental.crisis_language':    99,
+  'mental.grooming_detected':  97,
+  'mental.abuse_disclosed':    96,
+  'mental.isolation_pattern':  65,
+  // AI behaviour
+  'ai.romantic_roleplay':      85,
+  'ai.jailbreak_attempt':      80,
+  'ai.harmful_advice':         90,
+  'ai.emotional_dependency':   60,
+  // Contact
+  'contact.unknown_dm':        70,
+  'contact.off_platform':      75,
+  // Content
+  'content.graphic':           88,
+  'content.deepfake':          92,
+  // Screen time
+  'screen.late_night':         40,
+  'screen.excessive':          35,
+  // Privacy / app
+  'privacy.data_shared':       65,
+  'app.new_install':           20,
+  'app.scan_clean':            0,
+  'app.foreground':            5,
+  'app.tamper_detected':       95,
 }
 
 const ALERT_LEVEL = s => s >= 80 ? 'critical' : s >= 60 ? 'warn' : s >= 20 ? 'info' : 'ok'
 
 const CATEGORY = {
+  mental:  'Mental Health',
   ai:      'AI Activity',
   contact: 'Contact',
   content: 'Content',
@@ -45,6 +56,13 @@ const CATEGORY = {
   privacy: 'Privacy',
   app:     'App Activity',
 }
+
+// Crisis signals skip AI enrichment — rule score is definitive
+const CRISIS_TYPES = new Set([
+  'mental.crisis_language',
+  'mental.grooming_detected',
+  'mental.abuse_disclosed',
+])
 
 /* ── POST /api/signal ────────────────────────────────────── */
 router.post('/signal', signalLimiter, async (req, res) => {
@@ -72,9 +90,10 @@ router.post('/signal', signalLimiter, async (req, res) => {
     'start_time','total_hours','day','apps_scanned','threats_found',
     'attempts','contact_type','contact_age_unknown','data_type',
     'topic_category','flagged','prompt_pattern','session_frequency',
-    'persona_type','message','risk_score','level',
+    'persona_type','persona_name','message','risk_score','level',
     'event','package_name','app_label','foreground_minutes',
     'late_night_hour','os_version','device_model',
+    'sessions_today','topic_category','urgent',
   ])
   const payload = Object.fromEntries(
     Object.entries(rawPayload).filter(([k]) => ALLOWED_KEYS.has(k))
@@ -83,8 +102,10 @@ router.post('/signal', signalLimiter, async (req, res) => {
   const ruleScore = Math.min(100, RULE_SCORES[type] ?? 10)
   const context   = { child_name: row.child_name, child_age: row.child_age, device: row.device_name }
 
-  // Only call AI for signals that matter — skip zero/low-risk noise
-  const ai = ruleScore >= 20 ? await analyzeSignal(type, payload, context) : null
+  // Crisis signals skip AI — their rule score is definitive and latency matters
+  const ai = (!CRISIS_TYPES.has(type) && ruleScore >= 20)
+    ? await analyzeSignal(type, payload, context)
+    : null
 
   const riskScore = ai?.risk_score ?? ruleScore
   const level     = ai?.level     ?? ALERT_LEVEL(riskScore)

@@ -20,18 +20,46 @@
     'relationship with you', 'fall in love', 'marry me', 'kiss me',
   ]
 
+  // Checked against full message text on-device only — content never sent to server
+  const CRISIS_PATTERNS = [
+    /\b(want to die|wanna die|i want to be dead)\b/i,
+    /\b(kill myself|end my life|end it all|ending it all)\b/i,
+    /\bsuicidal\b/i,
+    /\b(i'?m|i am) going to (kill|hurt) myself\b/i,
+    /\bdon'?t want to (live|be alive|exist)\b/i,
+    /\bcutting (myself|my wrists|my arms)\b/i,
+    /\bhope (i die|i don'?t wake up|to not wake up)\b/i,
+  ]
+
+  const GROOMING_PATTERNS = [
+    /\b(don'?t tell (anyone|your parents?)|keep this (secret|between us)|our (little )?secret)\b/i,
+    /\b(meet (me|up)|come (see|meet) me|where do you live|what'?s your address)\b/i,
+    /\bsend (me )?a? ?(photo|picture|pic|video|nude)\b/i,
+    /\b(are you home alone|are you alone right now)\b/i,
+    /\b(move to|talk on) (discord|telegram|whatsapp|snapchat|instagram)\b/i,
+    /\byour parents? (don'?t|can'?t|won'?t) (know|find out|understand)\b/i,
+  ]
+
+  const ABUSE_PATTERNS = [
+    /\b(he|she|they|someone) (hit|hits|hurt|hurts|touches|touched|abuses?|abused) me\b/i,
+    /\bmy (parent|mom|dad|stepdad|stepmom|uncle|brother|sister) (hurt|hits|touches|abuses?)\b/i,
+    /\b(being abused|i'?ve been (abused|assaulted|molested))\b/i,
+    /\bforces? me to\b/i,
+  ]
+
   const HARMFUL_TOPICS = [
-    { pattern: /how (to lose|to stop eating|to fast|to starve)/i,       category: 'diet_restriction' },
-    { pattern: /how (to make|to build).*(weapon|explosive|bomb)/i,       category: 'weapon' },
-    { pattern: /how (to get|to buy).*(drugs|weed|xanax)/i,              category: 'substances' },
-    { pattern: /how (to run away|to escape home)/i,                      category: 'runaway' },
-    { pattern: /self[\s-]?harm|cut myself|hurt myself/i,                  category: 'self_harm' },
+    { pattern: /how (to lose|to stop eating|to fast|to starve|to purge)/i,  category: 'diet_restriction' },
+    { pattern: /how (to make|to build).*(weapon|explosive|bomb)/i,           category: 'weapon' },
+    { pattern: /how (to get|to buy).*(drugs|weed|xanax|fentanyl|pills)/i,   category: 'substances' },
+    { pattern: /how (to run away|to escape home|to disappear)/i,             category: 'runaway' },
+    { pattern: /self[\s-]?harm|cut myself|hurt myself/i,                     category: 'self_harm' },
   ]
 
   function onMessageSend(el) {
     const text = el?.value || el?.textContent || ''
-    const firstChars = text.slice(0, 80)
-    const lower = firstChars.toLowerCase()
+    const preview = text.slice(0, 80)
+    const lower = preview.toLowerCase()
+    const fullLower = text.toLowerCase()
 
     messageCount++
     chrome.runtime.sendMessage({
@@ -41,13 +69,27 @@
       firstChars: lower,
     })
 
+    // Crisis checks run against full text on-device — highest priority, skip other checks
+    if (CRISIS_PATTERNS.some(p => p.test(fullLower))) {
+      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'crisis', urgent: true })
+      return
+    }
+    if (GROOMING_PATTERNS.some(p => p.test(fullLower))) {
+      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'grooming', urgent: true })
+      return
+    }
+    if (ABUSE_PATTERNS.some(p => p.test(fullLower))) {
+      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'abuse', urgent: true })
+      return
+    }
+
     if (!romanticSignalFired && ROMANTIC_KEYWORDS.some(k => lower.includes(k))) {
       romanticSignalFired = true
       chrome.runtime.sendMessage({ type: 'ROMANTIC_PATTERN', app: APP, frequency: 'detected' })
     }
 
     for (const { pattern, category } of HARMFUL_TOPICS) {
-      if (pattern.test(firstChars)) {
+      if (pattern.test(preview)) {
         chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category })
         break
       }
