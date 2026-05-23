@@ -150,6 +150,8 @@ await addColIfMissing('users',    'stripe_customer_id', 'TEXT')
 await addColIfMissing('users',    'stripe_sub_id',      'TEXT')
 await addColIfMissing('users',    'push_token',         'TEXT')
 await addColIfMissing('alerts',   'guidance',           'TEXT')
+await addColIfMissing('families', 'ai_calls_month',      'INT NOT NULL DEFAULT 0')
+await addColIfMissing('families', 'ai_calls_reset_date', 'DATE')
 
 // Compatibility wrapper — mimics better-sqlite3's prepare().get/all/run() API as async
 function prepare(sql) {

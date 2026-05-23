@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit'
 import db from '../db/schema.js'
 import { analyzeSignal } from '../ai/analyzer.js'
 import { generateGuidance } from '../agents/guidance.js'
+import { checkAndIncrementAiCap } from '../ai/quota.js'
 import { sendAlertEmail } from '../services/email.js'
 import { sendAlertPush } from '../services/push.js'
 
@@ -76,7 +77,7 @@ router.post('/signal', signalLimiter, async (req, res) => {
   const row = await db.prepare(`
     SELECT d.id as device_id, d.name as device_name, d.child_id,
            c.name as child_name, c.age as child_age, c.family_id,
-           u.name as parent_name, u.email as parent_email, u.push_token
+           u.name as parent_name, u.email as parent_email, u.push_token, u.plan
     FROM devices d
     JOIN children c ON c.id = d.child_id
     JOIN families f ON f.id = c.family_id
@@ -102,8 +103,12 @@ router.post('/signal', signalLimiter, async (req, res) => {
   const ruleScore = Math.min(100, RULE_SCORES[type] ?? 10)
   const context   = { child_name: row.child_name, child_age: row.child_age, device: row.device_name }
 
-  // Crisis signals skip AI — their rule score is definitive and latency matters
-  const ai = (!CRISIS_TYPES.has(type) && ruleScore >= 20)
+  // Starter plan: rule-based only — Claude API is never called
+  const planAllowsAI = row.plan !== 'starter'
+
+  // Crisis signals skip AI; starter skips AI; low-risk signals skip AI
+  const ai = (planAllowsAI && !CRISIS_TYPES.has(type) && ruleScore >= 20 &&
+    await checkAndIncrementAiCap(row.family_id, row.plan))
     ? await analyzeSignal(type, payload, context)
     : null
 
@@ -144,12 +149,17 @@ router.post('/signal', signalLimiter, async (req, res) => {
         const recentCount = recentRow?.count ?? 1
 
         // GuidanceAgent: generates parent-facing explanation + action + conversation starter
-        const guidance = await generateGuidance({
-          type, level, title,
-          childAge:    row.child_age,
-          platform:    payload.app || type.split('.')[0],
-          recentCount,
-        })
+        // Skip for starter plan or when monthly cap is already reached
+        const guidanceAllowed = planAllowsAI &&
+          await checkAndIncrementAiCap(row.family_id, row.plan)
+        const guidance = guidanceAllowed
+          ? await generateGuidance({
+              type, level, title,
+              childAge:    row.child_age,
+              platform:    payload.app || type.split('.')[0],
+              recentCount,
+            })
+          : null
         if (guidance) {
           await db.prepare('UPDATE alerts SET guidance = ? WHERE id = ?')
             .run(JSON.stringify(guidance), alertId)

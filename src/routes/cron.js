@@ -41,7 +41,7 @@ router.get('/weekly-digest', verifyCron, async (_req, res) => {
   // 2 queries replace O(families × children × 3) sequential queries
   const [families, childRows, signalRows] = await Promise.all([
     db.prepare(`
-      SELECT f.id, f.owner_id, u.name as parent_name, u.email as parent_email
+      SELECT f.id, f.owner_id, u.name as parent_name, u.email as parent_email, u.plan
       FROM families f JOIN users u ON u.id = f.owner_id
     `).all(),
     db.prepare(`
@@ -84,18 +84,21 @@ router.get('/weekly-digest', verifyCron, async (_req, res) => {
     const totalSignals = childStats.reduce((s, c) => s + c.signals, 0)
     if (totalSignals === 0) continue
 
-    // InsightsAgent: generate per-child insights in parallel
+    // InsightsAgent: generate per-child insights in parallel (Family + Family+ only)
+    const aiEnabled = family.plan !== 'starter'
     const childrenWithInsights = await Promise.all(
       childStats.map(async c => ({
         ...c,
-        insights: await generateInsights({
-          childName:    c.name,
-          childAge:     c.age,
-          typeCounts:   typeCountsByChild[c.id] ?? {},
-          criticalCount: c.critical,
-          warnCount:    c.warn,
-          totalSignals: c.signals,
-        }),
+        insights: aiEnabled
+          ? await generateInsights({
+              childName:    c.name,
+              childAge:     c.age,
+              typeCounts:   typeCountsByChild[c.id] ?? {},
+              criticalCount: c.critical,
+              warnCount:    c.warn,
+              totalSignals: c.signals,
+            })
+          : null,
       }))
     )
 
@@ -118,17 +121,22 @@ router.get('/monthly-insights', verifyCron, async (_req, res) => {
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30)
   const cutoffISO = cutoff.toISOString()
 
-  // All children with at least one signal in the last 30 days
+  // All children with at least one signal in the last 30 days — family+ plan only
   const activeChildren = await db.prepare(`
-    SELECT DISTINCT c.id, c.name, c.age, c.family_id
+    SELECT DISTINCT c.id, c.name, c.age, c.family_id, u.plan
     FROM children c
     JOIN devices d ON d.child_id = c.id
     JOIN signals s ON s.device_id = d.id
+    JOIN families f ON f.id = c.family_id
+    JOIN users    u ON u.id = f.owner_id
     WHERE s.created_at > ?
   `).all(cutoffISO)
 
   let generated = 0
   for (const child of activeChildren) {
+    // Growth insights are a Family+ exclusive feature
+    if (child.plan !== 'family-plus') continue
+
     // Skip if already generated for this period
     const existing = await db.prepare('SELECT id FROM child_insights WHERE child_id = ? AND period = ?').get(child.id, period)
     if (existing) continue
