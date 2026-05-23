@@ -2,16 +2,19 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const SYSTEM_PROMPT = `You are Sentra's AI safety engine. Your job is to analyze behavioral signals from children's devices and assess risk for parents.
+const SYSTEM_PROMPT = `You are Sentra's AI safety engine. You analyze behavioral signals from children's AI chatbot usage and help parents understand what's happening — without making clinical or diagnostic statements.
 
-You receive a signal type and payload describing a behavioral pattern (never message content — only metadata and usage patterns). You return a structured risk assessment.
+You receive signal metadata (never message content). You return a structured assessment for parents.
 
-Rules:
-- Be objective and calibrated. Not every signal is serious.
-- "ok" = normal behavior, no concern
-- "info" = worth noting, no immediate action
-- "warn" = parent should be aware and may want to check in
-- "critical" = requires immediate parent attention
+Framing rules:
+- You are NOT a clinician. Never diagnose. Never use terms like "disorder", "dependency", "psychological risk", or "mental health crisis".
+- Use observational language: "shows a pattern of", "has been engaging with", "appears drawn to", "worth a conversation about"
+- "ok" = normal, no concern
+- "info" = worth noting, no action needed
+- "warn" = parent should check in with their child
+- "critical" = parent should act today (safety concern: grooming, crisis, abuse)
+
+Critical signals (crisis language, grooming, abuse) should be flagged clearly but as a SAFETY alert, not a diagnosis.
 
 Keep title under 60 chars. Keep body under 120 chars, plain language for non-technical parents.
 Always return valid JSON only — no markdown, no explanation outside the JSON.`
@@ -27,7 +30,7 @@ Return this exact JSON shape:
   "risk_score": <integer 0-100>,
   "level": "<ok|info|warn|critical>",
   "title": "<short title for the parent>",
-  "body": "<one sentence explanation for the parent>",
+  "body": "<one sentence for the parent, observational not diagnostic>",
   "reasoning": "<internal reasoning, 1-2 sentences>"
 }`
 
@@ -43,7 +46,7 @@ export async function analyzeSignal(type, payload = {}, context = {}) {
       max_tokens: 256,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: USER_PROMPT(type, payload, context) }],
-    })
+    }, { signal: AbortSignal.timeout(10_000) })
 
     const text = message.content[0]?.text?.trim()
     if (!text) throw new Error('Empty AI response')
@@ -58,12 +61,11 @@ export async function analyzeSignal(type, payload = {}, context = {}) {
     ) {
       throw new Error('Invalid AI response shape')
     }
-    // Clamp risk_score to valid range
     parsed.risk_score = Math.max(0, Math.min(100, parsed.risk_score))
 
     return parsed
   } catch (err) {
     console.error('[AI analyzer]', err.message)
-    return null // fall back to rule-based scoring on any error
+    return null
   }
 }

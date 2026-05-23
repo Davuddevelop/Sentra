@@ -420,4 +420,34 @@ router.get('/export', requireAuth, requireFamily, async (req, res) => {
   res.json(exportData)
 })
 
+/* ── GET /api/child/:id/insights ─────────────────────────── */
+// Returns the most recent growth insight snapshot for a child.
+// Optional ?period=2025-05 to fetch a specific month.
+router.get('/child/:id/insights', requireAuth, requireFamily, async (req, res) => {
+  const childId = parseInt(req.params.id, 10)
+  if (!childId) return res.status(400).json({ error: 'Invalid child ID.' })
+
+  // Verify the child belongs to this family
+  const child = await db.prepare('SELECT id, family_id FROM children WHERE id = ?').get(childId)
+  if (!child || child.family_id !== req.family.id) {
+    return res.status(404).json({ error: 'Child not found.' })
+  }
+
+  const period = req.query.period
+  const row = period
+    ? await db.prepare('SELECT * FROM child_insights WHERE child_id = ? AND period = ?').get(childId, period)
+    : await db.prepare('SELECT * FROM child_insights WHERE child_id = ? ORDER BY period DESC LIMIT 1').get(childId)
+
+  if (!row) return res.json({ insights: null })
+
+  // Parse stored JSON fields
+  const insights = {
+    ...row,
+    interests:             JSON.parse(row.interests             ?? 'null'),
+    curiosity_themes:      JSON.parse(row.curiosity_themes      ?? 'null'),
+    conversation_prompts:  JSON.parse(row.conversation_prompts  ?? 'null'),
+  }
+  res.json({ insights })
+})
+
 export default router

@@ -113,6 +113,20 @@ const TABLES = [
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE INDEX IF NOT EXISTS idx_consent_log_user ON consent_log(user_id, created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS child_insights (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    child_id           INTEGER NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+    period             TEXT NOT NULL,
+    interests          TEXT,
+    thinking_style     TEXT,
+    curiosity_themes   TEXT,
+    growth_narrative   TEXT,
+    engagement_pattern TEXT,
+    conversation_prompts TEXT,
+    generated_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(child_id, period)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_child_insights ON child_insights(child_id, period DESC)`,
 ]
 
 for (const sql of TABLES) {

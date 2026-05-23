@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto'
 import db from '../db/schema.js'
 import { sendWeeklyDigest } from '../services/email.js'
 import { generateInsights } from '../agents/insights.js'
+import { generateGrowthInsights } from '../agents/growth.js'
 
 const router = Router()
 
@@ -109,6 +110,99 @@ router.get('/weekly-digest', verifyCron, async (_req, res) => {
   }
 
   res.json({ ok: true, sent })
+})
+
+/* ── GET /api/cron/monthly-insights — runs 1st of each month ─ */
+router.get('/monthly-insights', verifyCron, async (_req, res) => {
+  const period = new Date().toISOString().slice(0, 7) // "YYYY-MM"
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30)
+  const cutoffISO = cutoff.toISOString()
+
+  // All children with at least one signal in the last 30 days
+  const activeChildren = await db.prepare(`
+    SELECT DISTINCT c.id, c.name, c.age, c.family_id
+    FROM children c
+    JOIN devices d ON d.child_id = c.id
+    JOIN signals s ON s.device_id = d.id
+    WHERE s.created_at > ?
+  `).all(cutoffISO)
+
+  let generated = 0
+  for (const child of activeChildren) {
+    // Skip if already generated for this period
+    const existing = await db.prepare('SELECT id FROM child_insights WHERE child_id = ? AND period = ?').get(child.id, period)
+    if (existing) continue
+
+    // Gather data in parallel
+    const [signalRows, alertRows] = await Promise.all([
+      db.prepare(`
+        SELECT s.type, s.payload, s.created_at
+        FROM signals s JOIN devices d ON d.id = s.device_id
+        WHERE d.child_id = ? AND s.created_at > ?
+      `).all(child.id, cutoffISO),
+      db.prepare(`
+        SELECT a.category, a.title, a.level
+        FROM alerts a
+        WHERE a.child_id = ? AND a.created_at > ?
+          AND a.category NOT IN ('mental')
+      `).all(child.id, cutoffISO),
+    ])
+
+    // Build app usage counts from signal payloads
+    const appUsage = {}
+    const topicSignals = {}
+    let lateNightCount = 0
+    let totalSessionMins = 0
+    let sessionCount = 0
+
+    for (const s of signalRows) {
+      const payload = typeof s.payload === 'string' ? JSON.parse(s.payload) : s.payload
+      if (payload?.app) {
+        appUsage[payload.app] = (appUsage[payload.app] ?? 0) + 1
+      }
+      if (payload?.topic_category) {
+        topicSignals[payload.topic_category] = (topicSignals[payload.topic_category] ?? 0) + 1
+      }
+      if (s.type === 'screen.late_night') lateNightCount++
+      if (payload?.session_minutes) {
+        totalSessionMins += payload.session_minutes
+        sessionCount++
+      }
+    }
+
+    const avgSessionMins = sessionCount > 0 ? Math.round(totalSessionMins / sessionCount) : null
+    const alertTitles = alertRows
+      .filter(a => a.level !== 'critical') // exclude crisis alerts from growth context
+      .map(a => a.title)
+
+    const insights = await generateGrowthInsights({
+      childName:       child.name,
+      childAge:        child.age,
+      appUsage,
+      topicSignals,
+      sessionPatterns: { avgSessionMins, lateNightCount, totalSessions: signalRows.length },
+      alertTitles,
+    })
+
+    if (!insights) continue
+
+    await db.prepare(`
+      INSERT OR REPLACE INTO child_insights
+        (child_id, period, interests, thinking_style, curiosity_themes, growth_narrative, engagement_pattern, conversation_prompts)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      child.id, period,
+      JSON.stringify(insights.interests ?? null),
+      insights.thinking_style ?? null,
+      JSON.stringify(insights.curiosity_themes ?? null),
+      insights.growth_narrative ?? null,
+      insights.engagement_pattern ?? null,
+      JSON.stringify(insights.conversation_prompts ?? null),
+    )
+    generated++
+  }
+
+  res.json({ ok: true, period, generated })
 })
 
 export default router
