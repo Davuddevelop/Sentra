@@ -104,6 +104,29 @@ const TABLES = [
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE INDEX IF NOT EXISTS idx_install_tokens ON install_tokens(token, expires_at)`,
+  `CREATE TABLE IF NOT EXISTS consent_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event      TEXT NOT NULL,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_consent_log_user ON consent_log(user_id, created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS child_insights (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    child_id           INTEGER NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+    period             TEXT NOT NULL,
+    interests          TEXT,
+    thinking_style     TEXT,
+    curiosity_themes   TEXT,
+    growth_narrative   TEXT,
+    engagement_pattern TEXT,
+    conversation_prompts TEXT,
+    generated_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(child_id, period)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_child_insights ON child_insights(child_id, period DESC)`,
 ]
 
 for (const sql of TABLES) {
@@ -127,6 +150,8 @@ await addColIfMissing('users',    'stripe_customer_id', 'TEXT')
 await addColIfMissing('users',    'stripe_sub_id',      'TEXT')
 await addColIfMissing('users',    'push_token',         'TEXT')
 await addColIfMissing('alerts',   'guidance',           'TEXT')
+await addColIfMissing('families', 'ai_calls_month',      'INT NOT NULL DEFAULT 0')
+await addColIfMissing('families', 'ai_calls_reset_date', 'DATE')
 
 // Compatibility wrapper — mimics better-sqlite3's prepare().get/all/run() API as async
 function prepare(sql) {

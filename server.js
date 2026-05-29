@@ -219,6 +219,9 @@ app.get('/install/:token', async (req, res) => {
 </html>`)
 })
 
+// ─── Health check ─────────────────────────────────────────
+app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }))
+
 // ─── Static frontend (local dev / Railway) ───────────────
 app.use(express.static(join(__dirname, 'public')))
 app.use(express.static(join(__dirname, 'dist')))
@@ -226,16 +229,29 @@ app.get(/^(?!\/api).*$/, (_req, res) => {
   res.sendFile(join(__dirname, 'dist/index.html'))
 })
 
+// ─── Global error handler (must be last) ─────────────────
+// Catches any unhandled error thrown by route handlers
+app.use((err, req, res, _next) => {
+  const status = err.status || err.statusCode || 500
+  console.error(`[error] ${req.method} ${req.path}`, err.message)
+  res.status(status).json({ error: status < 500 ? err.message : 'Internal server error.' })
+})
+
 // ─── Start server (skip on Vercel — it handles this) ─────
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3001
-  app.listen(PORT, async () => {
+  const server = app.listen(PORT, async () => {
     console.log(`Sentra API → http://localhost:${PORT}`)
     await startSimulator()
     if (process.env.NODE_ENV !== 'production') {
       console.log('[jobs] background jobs running in-process')
     }
   })
+
+  // Graceful shutdown — finish in-flight requests before exit
+  const shutdown = () => server.close(() => { console.log('[server] shut down'); process.exit(0) })
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT',  shutdown)
 }
 
 export default app

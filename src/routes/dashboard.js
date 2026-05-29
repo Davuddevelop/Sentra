@@ -309,11 +309,40 @@ router.get('/stats', requireAuth, requireFamily, async (req, res) => {
 })
 
 /* ── POST /api/push/register ─────────────────────────────── */
-router.post('/push/register', requireAuth, async (req, res) => {
+// Accepts either JWT auth (web) or X-Device-Token header (mobile child device → look up parent)
+router.post('/push/register', async (req, res) => {
   const { push_token } = req.body ?? {}
-  if (!push_token) return res.status(400).json({ error: 'push_token required.' })
-  await db.prepare('UPDATE users SET push_token = ? WHERE id = ?').run(push_token, req.user.id)
-  res.json({ ok: true })
+  if (!push_token || !push_token.startsWith('ExponentPushToken')) {
+    return res.status(400).json({ error: 'Valid Expo push_token required.' })
+  }
+
+  const deviceToken = req.headers['x-device-token']
+  if (deviceToken) {
+    // Mobile path: look up parent owner via device token
+    const row = await db.prepare(`
+      SELECT u.id FROM devices d
+      JOIN children c ON c.id = d.child_id
+      JOIN families f ON f.id = c.family_id
+      JOIN users    u ON u.id = f.owner_id
+      WHERE d.device_token = ?
+    `).get(deviceToken)
+    if (!row) return res.status(401).json({ error: 'Unknown device.' })
+    await db.prepare('UPDATE users SET push_token = ? WHERE id = ?').run(push_token, row.id)
+    return res.json({ ok: true })
+  }
+
+  // Web path: require JWT
+  const cookieToken = req.cookies?.token
+  if (!cookieToken) return res.status(401).json({ error: 'Authentication required.' })
+  try {
+    const jwt = await import('jsonwebtoken')
+    const JWT_SECRET = process.env.JWT_SECRET
+    const payload = jwt.default.verify(cookieToken, JWT_SECRET, { algorithms: ['HS256'] })
+    await db.prepare('UPDATE users SET push_token = ? WHERE id = ?').run(push_token, payload.id)
+    res.json({ ok: true })
+  } catch {
+    res.status(401).json({ error: 'Session expired.' })
+  }
 })
 
 /* ── POST /api/family/co-owner ───────────────────────────── */
@@ -389,6 +418,36 @@ router.get('/export', requireAuth, requireFamily, async (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="sentra-data-export.json"')
   res.setHeader('Content-Type', 'application/json')
   res.json(exportData)
+})
+
+/* ── GET /api/child/:id/insights ─────────────────────────── */
+// Returns the most recent growth insight snapshot for a child.
+// Optional ?period=2025-05 to fetch a specific month.
+router.get('/child/:id/insights', requireAuth, requireFamily, async (req, res) => {
+  const childId = parseInt(req.params.id, 10)
+  if (!childId) return res.status(400).json({ error: 'Invalid child ID.' })
+
+  // Verify the child belongs to this family
+  const child = await db.prepare('SELECT id, family_id FROM children WHERE id = ?').get(childId)
+  if (!child || child.family_id !== req.family.id) {
+    return res.status(404).json({ error: 'Child not found.' })
+  }
+
+  const period = req.query.period
+  const row = period
+    ? await db.prepare('SELECT * FROM child_insights WHERE child_id = ? AND period = ?').get(childId, period)
+    : await db.prepare('SELECT * FROM child_insights WHERE child_id = ? ORDER BY period DESC LIMIT 1').get(childId)
+
+  if (!row) return res.json({ insights: null })
+
+  // Parse stored JSON fields
+  const insights = {
+    ...row,
+    interests:             JSON.parse(row.interests             ?? 'null'),
+    curiosity_themes:      JSON.parse(row.curiosity_themes      ?? 'null'),
+    conversation_prompts:  JSON.parse(row.conversation_prompts  ?? 'null'),
+  }
+  res.json({ insights })
 })
 
 export default router

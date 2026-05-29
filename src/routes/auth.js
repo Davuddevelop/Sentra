@@ -63,6 +63,10 @@ router.post('/register', authLimiter, async (req, res) => {
     const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
     const sessionToken = issueToken(user)
 
+    // COPPA audit — record account creation and consent email dispatch
+    await db.prepare('INSERT INTO consent_log (user_id, event, ip_address, user_agent) VALUES (?, ?, ?, ?)')
+      .run(userId, 'account_created', req.ip, req.headers['user-agent'] ?? null)
+
     setImmediate(() => {
       sendConsentEmail({ name: name.trim(), email: email.toLowerCase().trim(), consentToken })
       sendWelcomeEmail({ name: name.trim(), email: email.toLowerCase().trim() })
@@ -112,6 +116,10 @@ router.get('/verify-consent', async (req, res) => {
   }
 
   await db.prepare('UPDATE users SET consent_verified = 1, consent_token = NULL WHERE id = ?').run(user.id)
+
+  // COPPA audit log — immutable record of who consented, when, and from where
+  await db.prepare('INSERT INTO consent_log (user_id, event, ip_address, user_agent) VALUES (?, ?, ?, ?)')
+    .run(user.id, 'parental_consent_verified', req.ip, req.headers['user-agent'] ?? null)
 
   const appUrl = process.env.APP_URL || 'http://localhost:5173'
   res.redirect(`${appUrl}/dashboard.html?consent=verified`)

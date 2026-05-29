@@ -1,22 +1,69 @@
-const API_BASE    = 'https://sentra-peach-delta.vercel.app'
-const STATUS_TTL  = 30 * 1000 // re-verify at most every 30 seconds
+const API_BASE   = 'https://sentra-peach-delta.vercel.app'
+const STATUS_TTL = 30 * 1000
+
+const MONITORED_APPS = ['ChatGPT', 'Claude', 'Gemini', 'Copilot', 'Character.AI', 'Replika']
+
+async function getTodaySessions() {
+  const today = new Date().toISOString().slice(0, 10)
+  const keys  = MONITORED_APPS.map(a => `dailySessions_${a}`)
+  const data  = await chrome.storage.local.get(keys)
+  return MONITORED_APPS
+    .map(app => ({ app, count: data[`dailySessions_${app}`]?.date === today ? data[`dailySessions_${app}`].count : 0 }))
+    .filter(r => r.count > 0)
+}
 
 function makeRow(label, value) {
   const row = document.createElement('div')
-  row.className = 'device-row'
-  row.style.marginTop = label === 'Monitoring' ? '6px' : '0'
-  const lEl = document.createElement('div'); lEl.className = 'device-label'; lEl.textContent = label
-  const vEl = document.createElement('div'); vEl.className = 'device-token'; vEl.style.cssText = 'font-family:inherit;font-size:13px'; vEl.textContent = value
+  row.className = 'info-row'
+  const lEl = document.createElement('div'); lEl.className = 'info-label'; lEl.textContent = label
+  const vEl = document.createElement('div'); vEl.className = 'info-value';  vEl.textContent = value
   row.appendChild(lEl); row.appendChild(vEl)
   return row
 }
 
-function renderConnected(sec, dot, text, data) {
+function makeAppRow(app, count) {
+  const row = document.createElement('div')
+  row.className = 'app-row'
+  const nameEl  = document.createElement('div'); nameEl.className = 'app-name';  nameEl.textContent = app
+  const countEl = document.createElement('div'); countEl.className = 'app-count'; countEl.textContent = `${count} session${count !== 1 ? 's' : ''}`
+  row.appendChild(nameEl); row.appendChild(countEl)
+  return row
+}
+
+async function renderConnected(sec, dot, text, data) {
   dot.classList.remove('inactive')
-  text.textContent = 'Active — monitoring AI apps'
+  text.textContent = `Active — monitoring ${data.child_name}`
+
   sec.innerHTML = ''
   sec.appendChild(makeRow('Device', data.device_name))
-  sec.appendChild(makeRow('Monitoring', data.child_name))
+
+  // Today's activity
+  const sessions = await getTodaySessions()
+  const actHeader = document.createElement('div')
+  actHeader.className = 'section-label'
+  actHeader.textContent = "Today's AI activity"
+  sec.appendChild(actHeader)
+
+  if (sessions.length === 0) {
+    const empty = document.createElement('div')
+    empty.className = 'empty-activity'
+    empty.textContent = 'No AI app sessions today'
+    sec.appendChild(empty)
+  } else {
+    const grid = document.createElement('div')
+    grid.className = 'app-grid'
+    sessions.forEach(({ app, count }) => grid.appendChild(makeAppRow(app, count)))
+    sec.appendChild(grid)
+  }
+
+  // Pending signals badge
+  const { queue = [] } = await chrome.storage.local.get('queue')
+  if (queue.length > 0) {
+    const badge = document.createElement('div')
+    badge.className = 'pending-badge'
+    badge.textContent = `${queue.length} signal${queue.length !== 1 ? 's' : ''} pending upload`
+    sec.appendChild(badge)
+  }
 }
 
 async function init() {
@@ -32,14 +79,12 @@ async function init() {
     return
   }
 
-  // Show cached status immediately so the popup feels instant
   const { statusCache } = await chrome.storage.local.get('statusCache')
   if (statusCache?.ts && Date.now() - statusCache.ts < STATUS_TTL && statusCache.ok) {
     renderConnected(sec, dot, text, statusCache)
     return
   }
 
-  // Cache expired or missing — verify against server
   try {
     const res = await fetch(`${API_BASE}/api/signal`, {
       method: 'POST',
@@ -58,15 +103,15 @@ async function init() {
       sec.innerHTML = `<p class="no-token">Token was rejected. Open Settings and re-enter it.</p>`
     }
   } catch {
-    // Server unreachable — show masked token, don't mark as inactive
     dot.classList.remove('inactive')
     text.textContent = 'Server offline — will retry'
-    sec.innerHTML = `
-      <div class="device-row">
-        <div class="device-label">Token</div>
-        <div class="device-token">••••••••••••••••••••••••••••${deviceToken.slice(-4)}</div>
-      </div>
-    `
+    const masked = document.createElement('div')
+    masked.className = 'info-row'
+    const l = document.createElement('div'); l.className = 'info-label'; l.textContent = 'Token'
+    const v = document.createElement('div'); v.className = 'info-value'; v.style.fontFamily = 'monospace'
+    v.textContent = `••••••••••••••••••••••••••••${deviceToken.slice(-4)}`
+    masked.appendChild(l); masked.appendChild(v)
+    sec.appendChild(masked)
   }
 }
 

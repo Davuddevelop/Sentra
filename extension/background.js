@@ -91,10 +91,29 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
   handleMessage(msg, tabId)
 })
 
+// ── Daily session frequency tracking ────────────────────────────────────────
+// Counts how many sessions per app per day. Fires mental.isolation_pattern at 3+.
+async function trackDailySession(app) {
+  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  const key = `dailySessions_${app}`
+  const { [key]: stored = null } = await chrome.storage.local.get(key)
+  const record = (stored && stored.date === today) ? stored : { date: today, count: 0 }
+  record.count++
+  await chrome.storage.local.set({ [key]: record })
+  return record.count
+}
+
 async function handleMessage(msg, tabId) {
   switch (msg.type) {
     case 'SESSION_START': {
       await setSession(tabId, { app: msg.app, startMs: Date.now(), messageCount: 0, patternFlags: [] })
+      const sessionsToday = await trackDailySession(msg.app)
+      if (sessionsToday >= 3) {
+        enqueueSignal({
+          type: 'mental.isolation_pattern',
+          payload: { app: msg.app, sessions_today: sessionsToday },
+        })
+      }
       break
     }
 
@@ -126,7 +145,11 @@ async function handleMessage(msg, tabId) {
       await setSession(tabId, s)
       enqueueSignal({
         type: 'ai.romantic_roleplay',
-        payload: { app: msg.app, persona_type: 'romantic', session_frequency: msg.frequency || 'detected' },
+        payload: {
+          app: msg.app, persona_type: 'romantic', session_frequency: msg.frequency || 'detected',
+          ...(msg.persona_name ? { persona_name: msg.persona_name } : {}),
+          ...(msg.messageText ? { message_text: msg.messageText.slice(0, 500) } : {}),
+        },
       })
       break
     }
@@ -135,7 +158,7 @@ async function handleMessage(msg, tabId) {
       const mins = await sessionMinutes(tabId)
       enqueueSignal({
         type: 'ai.emotional_dependency',
-        payload: { app: msg.app, session_minutes: mins, sessions_today: msg.sessionsToday || 1 },
+        payload: { app: msg.app, session_minutes: mins, sessions_today: msg.sessionsToday || 1, ...(msg.persona_name ? { persona_name: msg.persona_name } : {}) },
       })
       break
     }
@@ -159,17 +182,22 @@ async function handleMessage(msg, tabId) {
     }
 
     case 'HARMFUL_CONTENT': {
-      enqueueSignal({
-        type: 'ai.harmful_advice',
-        payload: { app: msg.app, topic_category: msg.category || 'unknown', flagged: true },
-      })
+      const mentalCategories = { crisis: 'mental.crisis_language', grooming: 'mental.grooming_detected', abuse: 'mental.abuse_disclosed' }
+      const signalType = mentalCategories[msg.category] || 'ai.harmful_advice'
+      const msgText = msg.messageText ? { message_text: msg.messageText.slice(0, 500) } : {}
+      const payload = signalType.startsWith('mental.')
+        ? { app: msg.app, urgent: true, ...(msg.persona_name ? { persona_name: msg.persona_name } : {}), ...msgText }
+        : { app: msg.app, topic_category: msg.category || 'unknown', flagged: true, ...msgText }
+      await enqueueSignal({ type: signalType, payload })
+      // Crisis signals flush immediately — don't wait 5 minutes
+      if (msg.urgent) await flushQueue()
       break
     }
 
     case 'SAVE_DEVICE_TOKEN': {
       if (msg.token) {
         await chrome.storage.local.set({ deviceToken: msg.token })
-        // Open the options page so the parent/child sees confirmation
+        chrome.runtime.setUninstallURL(`${API_BASE}/api/signal/uninstall?token=${msg.token}`)
         chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })
       }
       break
@@ -192,11 +220,31 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   }
 })
 
-// ── Periodic flush ────────────────────────────────────────────────────────────
-chrome.alarms.create('flush', { periodInMinutes: 5 })
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'flush') flushQueue()
+// ── Periodic flush + daily heartbeat ─────────────────────────────────────────
+chrome.alarms.create('flush',     { periodInMinutes: 5 })
+chrome.alarms.create('heartbeat', { periodInMinutes: 24 * 60 })
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'flush') {
+    flushQueue()
+  } else if (alarm.name === 'heartbeat') {
+    // Daily keepalive — server uses absence of heartbeats to detect tampering
+    const { deviceToken } = await chrome.storage.local.get('deviceToken')
+    if (deviceToken) {
+      enqueueSignal({ type: 'app.scan_clean', payload: { event: 'heartbeat' } })
+      flushQueue()
+    }
+  }
 })
+
+// ── Uninstall tracking ────────────────────────────────────────────────────────
+async function setUninstallURL() {
+  const { deviceToken } = await chrome.storage.local.get('deviceToken')
+  if (deviceToken) {
+    chrome.runtime.setUninstallURL(`${API_BASE}/api/signal/uninstall?token=${deviceToken}`)
+  }
+}
+setUninstallURL()
 
 // ── Install / startup ─────────────────────────────────────────────────────────
 chrome.runtime.onInstalled.addListener((details) => {
