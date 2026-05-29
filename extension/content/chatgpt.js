@@ -71,26 +71,26 @@
 
     // Crisis checks run against full text on-device — highest priority, skip other checks
     if (CRISIS_PATTERNS.some(p => p.test(fullLower))) {
-      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'crisis', urgent: true })
+      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'crisis', urgent: true, messageText: text.slice(0, 500) })
       return
     }
     if (GROOMING_PATTERNS.some(p => p.test(fullLower))) {
-      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'grooming', urgent: true })
+      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'grooming', urgent: true, messageText: text.slice(0, 500) })
       return
     }
     if (ABUSE_PATTERNS.some(p => p.test(fullLower))) {
-      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'abuse', urgent: true })
+      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'abuse', urgent: true, messageText: text.slice(0, 500) })
       return
     }
 
     if (!romanticSignalFired && ROMANTIC_KEYWORDS.some(k => lower.includes(k))) {
       romanticSignalFired = true
-      chrome.runtime.sendMessage({ type: 'ROMANTIC_PATTERN', app: APP, frequency: 'detected' })
+      chrome.runtime.sendMessage({ type: 'ROMANTIC_PATTERN', app: APP, frequency: 'detected', messageText: text.slice(0, 500) })
     }
 
     for (const { pattern, category } of HARMFUL_TOPICS) {
       if (pattern.test(preview)) {
-        chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category })
+        chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category, messageText: text.slice(0, 500) })
         break
       }
     }

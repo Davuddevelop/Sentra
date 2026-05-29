@@ -145,7 +145,11 @@ async function handleMessage(msg, tabId) {
       await setSession(tabId, s)
       enqueueSignal({
         type: 'ai.romantic_roleplay',
-        payload: { app: msg.app, persona_type: 'romantic', session_frequency: msg.frequency || 'detected', ...(msg.persona_name ? { persona_name: msg.persona_name } : {}) },
+        payload: {
+          app: msg.app, persona_type: 'romantic', session_frequency: msg.frequency || 'detected',
+          ...(msg.persona_name ? { persona_name: msg.persona_name } : {}),
+          ...(msg.messageText ? { message_text: msg.messageText.slice(0, 500) } : {}),
+        },
       })
       break
     }
@@ -180,9 +184,10 @@ async function handleMessage(msg, tabId) {
     case 'HARMFUL_CONTENT': {
       const mentalCategories = { crisis: 'mental.crisis_language', grooming: 'mental.grooming_detected', abuse: 'mental.abuse_disclosed' }
       const signalType = mentalCategories[msg.category] || 'ai.harmful_advice'
+      const msgText = msg.messageText ? { message_text: msg.messageText.slice(0, 500) } : {}
       const payload = signalType.startsWith('mental.')
-        ? { app: msg.app, urgent: true, ...(msg.persona_name ? { persona_name: msg.persona_name } : {}) }
-        : { app: msg.app, topic_category: msg.category || 'unknown', flagged: true }
+        ? { app: msg.app, urgent: true, ...(msg.persona_name ? { persona_name: msg.persona_name } : {}), ...msgText }
+        : { app: msg.app, topic_category: msg.category || 'unknown', flagged: true, ...msgText }
       await enqueueSignal({ type: signalType, payload })
       // Crisis signals flush immediately — don't wait 5 minutes
       if (msg.urgent) await flushQueue()

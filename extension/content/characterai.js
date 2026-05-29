@@ -90,15 +90,15 @@
 
     // Crisis checks run against full text on-device — highest priority
     if (CRISIS_PATTERNS.some(p => p.test(fullLower))) {
-      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'crisis', urgent: true, persona_name: getPersonaName() })
+      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'crisis', urgent: true, persona_name: getPersonaName(), messageText: text.slice(0, 500) })
       return
     }
     if (GROOMING_PATTERNS.some(p => p.test(fullLower))) {
-      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'grooming', urgent: true, persona_name: getPersonaName() })
+      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'grooming', urgent: true, persona_name: getPersonaName(), messageText: text.slice(0, 500) })
       return
     }
     if (ABUSE_PATTERNS.some(p => p.test(fullLower))) {
-      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'abuse', urgent: true, persona_name: getPersonaName() })
+      chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'abuse', urgent: true, persona_name: getPersonaName(), messageText: text.slice(0, 500) })
       return
     }
 
@@ -109,12 +109,13 @@
         app: APP,
         frequency: 'daily',
         persona_name: getPersonaName(),
+        messageText: text.slice(0, 500),
       })
     }
 
     for (const { pattern, category } of HARMFUL_TOPICS) {
       if (pattern.test(preview)) {
-        chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category, persona_name: getPersonaName() })
+        chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category, persona_name: getPersonaName(), messageText: text.slice(0, 500) })
         break
       }
     }

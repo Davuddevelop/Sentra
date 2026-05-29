@@ -86,6 +86,11 @@ router.post('/signal', signalLimiter, async (req, res) => {
   `).get(deviceToken)
   if (!row) return res.status(401).json({ error: 'Unknown device.' })
 
+  // Extract message_text BEFORE the allowlist — used for AI analysis only, never stored in DB
+  const messageText = typeof rawPayload?.message_text === 'string' && rawPayload.message_text.length > 0
+    ? rawPayload.message_text.slice(0, 500)
+    : null
+
   const ALLOWED_KEYS = new Set([
     'app','platform','session_minutes','sessions_today','duration_minutes',
     'start_time','total_hours','day','apps_scanned','threats_found',
@@ -94,7 +99,7 @@ router.post('/signal', signalLimiter, async (req, res) => {
     'persona_type','persona_name','message','risk_score','level',
     'event','package_name','app_label','foreground_minutes',
     'late_night_hour','os_version','device_model',
-    'sessions_today','topic_category','urgent',
+    'urgent',
   ])
   const payload = Object.fromEntries(
     Object.entries(rawPayload).filter(([k]) => ALLOWED_KEYS.has(k))
@@ -106,13 +111,16 @@ router.post('/signal', signalLimiter, async (req, res) => {
   // Starter plan: rule-based only — Claude API is never called
   const planAllowsAI = row.plan !== 'starter'
 
-  // Crisis signals skip AI; starter skips AI; low-risk signals skip AI
-  const ai = (planAllowsAI && !CRISIS_TYPES.has(type) && ruleScore >= 20 &&
+  // Run AI when plan allows, signal is significant, and quota remains.
+  // Crisis signals are included — AI can generate a better parent message,
+  // but ruleScore floor below ensures the score never drops below the rule minimum.
+  const ai = (planAllowsAI && ruleScore >= 20 &&
     await checkAndIncrementAiCap(row.family_id, row.plan))
-    ? await analyzeSignal(type, payload, context)
+    ? await analyzeSignal(type, payload, context, messageText)
     : null
 
-  const riskScore = ai?.risk_score ?? ruleScore
+  // AI can't downgrade a rule score (e.g. crisis stays at 99 even if AI returns 80)
+  const riskScore = ai ? Math.max(ai.risk_score, ruleScore) : ruleScore
   const level     = ai?.level     ?? ALERT_LEVEL(riskScore)
   const prefix    = type.split('.')[0]
   const category  = CATEGORY[prefix] || 'Activity'
@@ -155,9 +163,10 @@ router.post('/signal', signalLimiter, async (req, res) => {
         const guidance = guidanceAllowed
           ? await generateGuidance({
               type, level, title,
-              childAge:    row.child_age,
-              platform:    payload.app || type.split('.')[0],
+              childAge:       row.child_age,
+              platform:       payload.app || type.split('.')[0],
               recentCount,
+              messageContext: messageText,
             })
           : null
         if (guidance) {

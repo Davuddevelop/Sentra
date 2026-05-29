@@ -2,9 +2,9 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const SYSTEM_PROMPT = `You are Sentra's AI safety engine. You analyze behavioral signals from children's AI chatbot usage and help parents understand what's happening — without making clinical or diagnostic statements.
+const SYSTEM_PROMPT = `You are Sentra's AI safety engine. You analyze children's AI chatbot activity and help parents understand what's happening — without making clinical or diagnostic statements.
 
-You receive signal metadata (never message content). You return a structured assessment for parents.
+You receive behavioral signal metadata and, when available, a snippet of the child's actual message. Use the message snippet to make your assessment specific and useful. Never reproduce the message text verbatim in your output.
 
 Framing rules:
 - You are NOT a clinician. Never diagnose. Never use terms like "disorder", "dependency", "psychological risk", or "mental health crisis".
@@ -13,28 +13,27 @@ Framing rules:
 - "info" = worth noting, no action needed
 - "warn" = parent should check in with their child
 - "critical" = parent should act today (safety concern: grooming, crisis, abuse)
-
-Critical signals (crisis language, grooming, abuse) should be flagged clearly but as a SAFETY alert, not a diagnosis.
+- For crisis/grooming/abuse signals, always return "critical" — never downgrade these regardless of context.
 
 Keep title under 60 chars. Keep body under 120 chars, plain language for non-technical parents.
 Always return valid JSON only — no markdown, no explanation outside the JSON.`
 
-const USER_PROMPT = (type, payload, context) => `Analyze this behavioral signal and return a JSON risk assessment.
+const USER_PROMPT = (type, payload, context, messageText) => `Analyze this signal and return a JSON risk assessment.
 
 Signal type: ${type}
 Payload: ${JSON.stringify(payload, null, 2)}
-Context: ${JSON.stringify(context, null, 2)}
+Context: ${JSON.stringify(context, null, 2)}${messageText ? `\nChild's message snippet: "${messageText}"` : ''}
 
 Return this exact JSON shape:
 {
   "risk_score": <integer 0-100>,
   "level": "<ok|info|warn|critical>",
-  "title": "<short title for the parent>",
-  "body": "<one sentence for the parent, observational not diagnostic>",
+  "title": "<short parent-facing title, specific if message snippet is available>",
+  "body": "<one sentence for the parent, observational not diagnostic, specific if message snippet is available>",
   "reasoning": "<internal reasoning, 1-2 sentences>"
 }`
 
-export async function analyzeSignal(type, payload = {}, context = {}) {
+export async function analyzeSignal(type, payload = {}, context = {}, messageText = null) {
   const key = process.env.ANTHROPIC_API_KEY
   if (!key || key.length < 20 || key.includes('...')) {
     return null // fall back to rule-based scoring
@@ -45,7 +44,7 @@ export async function analyzeSignal(type, payload = {}, context = {}) {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 256,
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: USER_PROMPT(type, payload, context) }],
+      messages: [{ role: 'user', content: USER_PROMPT(type, payload, context, messageText) }],
     }, { signal: AbortSignal.timeout(10_000) })
 
     const text = message.content[0]?.text?.trim()
