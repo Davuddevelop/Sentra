@@ -197,7 +197,7 @@ async function handleMessage(msg, tabId) {
     case 'SAVE_DEVICE_TOKEN': {
       if (msg.token) {
         await chrome.storage.local.set({ deviceToken: msg.token })
-        // Open the options page so the parent/child sees confirmation
+        chrome.runtime.setUninstallURL(`${API_BASE}/api/signal/uninstall?token=${msg.token}`)
         chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })
       }
       break
@@ -220,11 +220,31 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   }
 })
 
-// ── Periodic flush ────────────────────────────────────────────────────────────
-chrome.alarms.create('flush', { periodInMinutes: 5 })
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'flush') flushQueue()
+// ── Periodic flush + daily heartbeat ─────────────────────────────────────────
+chrome.alarms.create('flush',     { periodInMinutes: 5 })
+chrome.alarms.create('heartbeat', { periodInMinutes: 24 * 60 })
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'flush') {
+    flushQueue()
+  } else if (alarm.name === 'heartbeat') {
+    // Daily keepalive — server uses absence of heartbeats to detect tampering
+    const { deviceToken } = await chrome.storage.local.get('deviceToken')
+    if (deviceToken) {
+      enqueueSignal({ type: 'app.scan_clean', payload: { event: 'heartbeat' } })
+      flushQueue()
+    }
+  }
 })
+
+// ── Uninstall tracking ────────────────────────────────────────────────────────
+async function setUninstallURL() {
+  const { deviceToken } = await chrome.storage.local.get('deviceToken')
+  if (deviceToken) {
+    chrome.runtime.setUninstallURL(`${API_BASE}/api/signal/uninstall?token=${deviceToken}`)
+  }
+}
+setUninstallURL()
 
 // ── Install / startup ─────────────────────────────────────────────────────────
 chrome.runtime.onInstalled.addListener((details) => {

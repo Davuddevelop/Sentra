@@ -213,4 +213,57 @@ router.get('/monthly-insights', verifyCron, async (_req, res) => {
   res.json({ ok: true, period, generated })
 })
 
+/* ── GET /api/cron/check-tamper — runs every 12h ─────────────────────────── */
+// Finds devices that sent signals recently but have gone silent for 48h+.
+// Silence after activity = likely disabled. Creates a tamper alert per device.
+router.get('/check-tamper', verifyCron, async (_req, res) => {
+  const { sendAlertEmail } = await import('../services/email.js')
+  const { sendAlertPush }  = await import('../services/push.js')
+
+  // Devices that had a signal in the last 14 days but nothing in the last 48h
+  const silentDevices = await db.prepare(`
+    SELECT d.id as device_id, d.name as device_name, d.child_id,
+           c.name as child_name, c.family_id,
+           u.name as parent_name, u.email as parent_email, u.push_token,
+           MAX(s.created_at) as last_signal
+    FROM devices d
+    JOIN children c  ON c.id = d.child_id
+    JOIN families f  ON f.id = c.family_id
+    JOIN users    u  ON u.id = f.owner_id
+    JOIN signals  s  ON s.device_id = d.id
+    WHERE s.created_at > datetime('now', '-14 days')
+    GROUP BY d.id
+    HAVING last_signal < datetime('now', '-48 hours')
+  `).all()
+
+  let alerted = 0
+  for (const row of silentDevices) {
+    // Don't spam — skip if we already sent a tamper alert for this device in the last 7 days
+    const recent = await db.prepare(`
+      SELECT id FROM alerts
+      WHERE child_id = ? AND category = 'App Activity'
+        AND title LIKE '%went silent%'
+        AND created_at > datetime('now', '-7 days')
+    `).get(row.child_id)
+    if (recent) continue
+
+    const title = `Sentra went silent on ${row.device_name}`
+    const body  = `No activity detected on ${row.child_name}'s device for 48+ hours. The extension may have been disabled.`
+
+    const { lastInsertRowid: signalId } = await db.prepare(
+      'INSERT INTO signals (device_id, type, payload, risk_score, processed) VALUES (?, ?, ?, ?, 1)'
+    ).run(row.device_id, 'app.tamper_detected', JSON.stringify({ event: 'silent', last_signal: row.last_signal }), 75)
+
+    await db.prepare(
+      'INSERT INTO alerts (family_id, child_id, signal_id, level, category, title, body) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(row.family_id, row.child_id, signalId, 'warn', 'App Activity', title, body)
+
+    sendAlertEmail({ parentName: row.parent_name, parentEmail: row.parent_email, childName: row.child_name, alert: { level: 'warn', title, body } })
+    if (row.push_token) sendAlertPush({ pushToken: row.push_token, childName: row.child_name, level: 'warn', title })
+    alerted++
+  }
+
+  res.json({ ok: true, alerted })
+})
+
 export default router

@@ -191,4 +191,43 @@ router.post('/signal', signalLimiter, async (req, res) => {
   res.json({ ok: true, risk_score: riskScore, level, alert_id: alertId, ai_powered: !!ai, device_name: row.device_name, child_name: row.child_name })
 })
 
+/* ── GET /api/signal/uninstall — called by Chrome when extension is removed ── */
+// No auth — Chrome opens this URL server-side when user uninstalls the extension.
+// Token is validated by format + DB lookup only.
+router.get('/signal/uninstall', async (req, res) => {
+  const APP_URL = process.env.APP_URL || 'https://sentra-peach-delta.vercel.app'
+  const { token } = req.query
+  if (!token || !/^[a-f0-9]{32}$/.test(token)) return res.redirect(APP_URL)
+
+  const row = await db.prepare(`
+    SELECT d.id as device_id, d.name as device_name, d.child_id,
+           c.name as child_name, c.family_id,
+           u.name as parent_name, u.email as parent_email, u.push_token
+    FROM devices d
+    JOIN children c ON c.id = d.child_id
+    JOIN families f ON f.id = c.family_id
+    JOIN users    u ON u.id = f.owner_id
+    WHERE d.device_token = ?
+  `).get(token).catch(() => null)
+
+  if (!row) return res.redirect(APP_URL)
+
+  const riskScore = 95
+  const title = `Sentra removed from ${row.device_name}`
+  const body  = `Monitoring was disabled on ${row.child_name}'s device. Check in with them today.`
+
+  const { lastInsertRowid: signalId } = await db.prepare(
+    'INSERT INTO signals (device_id, type, payload, risk_score, processed) VALUES (?, ?, ?, ?, 1)'
+  ).run(row.device_id, 'app.tamper_detected', JSON.stringify({ event: 'uninstalled', device: row.device_name }), riskScore)
+
+  await db.prepare(
+    'INSERT INTO alerts (family_id, child_id, signal_id, level, category, title, body) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(row.family_id, row.child_id, signalId, 'critical', 'App Activity', title, body)
+
+  sendAlertEmail({ parentName: row.parent_name, parentEmail: row.parent_email, childName: row.child_name, alert: { level: 'critical', title, body } })
+  if (row.push_token) sendAlertPush({ pushToken: row.push_token, childName: row.child_name, level: 'critical', title })
+
+  res.redirect(APP_URL)
+})
+
 export default router
