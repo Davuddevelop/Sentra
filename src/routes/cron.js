@@ -28,8 +28,10 @@ function verifyCron(req, res, next) {
 router.get('/purge', verifyCron, async (_req, res) => {
   const { changes: s } = await db.prepare("DELETE FROM signals WHERE created_at < datetime('now', '-90 days')").run()
   const { changes: a } = await db.prepare("DELETE FROM alerts  WHERE created_at < datetime('now', '-90 days')").run()
-  console.log(`[cron/purge] removed ${s} signals, ${a} alerts`)
-  res.json({ ok: true, signals: s, alerts: a })
+  // child_insights older than 90 days — matches the data retention promise in the privacy policy
+  const { changes: i } = await db.prepare("DELETE FROM child_insights WHERE created_at < datetime('now', '-90 days')").run()
+  console.log(`[cron/purge] removed ${s} signals, ${a} alerts, ${i} insights`)
+  res.json({ ok: true, signals: s, alerts: a, insights: i })
 })
 
 /* ── GET /api/cron/weekly-digest — runs Sunday 08:00 ─────── */

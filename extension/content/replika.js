@@ -74,7 +74,7 @@
         })
 
         if (CRISIS_PATTERNS.some(p => p.test(text.toLowerCase()))) {
-          chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'crisis', urgent: true, messageText: text.slice(0, 500) })
+          chrome.runtime.sendMessage({ type: 'HARMFUL_CONTENT', app: APP, category: 'crisis', urgent: true })
         }
       }
     })

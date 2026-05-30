@@ -18,6 +18,16 @@ const signalLimiter = rateLimit({
   message: { error: 'Signal rate limit exceeded.' },
 })
 
+// Uninstall endpoint: 3 requests per token per hour to prevent alert spam
+const uninstallLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  keyGenerator: (req) => req.query?.token || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false,
+})
+
 const RULE_SCORES = {
   // Mental health — crisis tier (always critical, bypass AI analyzer)
   'mental.crisis_language':    99,
@@ -72,12 +82,13 @@ router.post('/signal', signalLimiter, async (req, res) => {
 
   const { type, payload: rawPayload = {} } = req.body ?? {}
   if (!type) return res.status(400).json({ error: 'Signal type is required.' })
+  if (!(type in RULE_SCORES)) return res.status(400).json({ error: 'Unknown signal type.' })
 
   // Single JOIN replaces 4 sequential queries
   const row = await db.prepare(`
     SELECT d.id as device_id, d.name as device_name, d.child_id,
            c.name as child_name, c.age as child_age, c.family_id,
-           u.name as parent_name, u.email as parent_email, u.push_token, u.plan
+           u.name as parent_name, u.email as parent_email, u.push_token, u.plan, u.consent_verified
     FROM devices d
     JOIN children c ON c.id = d.child_id
     JOIN families f ON f.id = c.family_id
@@ -85,11 +96,7 @@ router.post('/signal', signalLimiter, async (req, res) => {
     WHERE d.device_token = ?
   `).get(deviceToken)
   if (!row) return res.status(401).json({ error: 'Unknown device.' })
-
-  // Extract message_text BEFORE the allowlist — used for AI analysis only, never stored in DB
-  const messageText = typeof rawPayload?.message_text === 'string' && rawPayload.message_text.length > 0
-    ? rawPayload.message_text.slice(0, 500)
-    : null
+  if (!row.consent_verified) return res.status(403).json({ error: 'Parental consent required before monitoring can begin.' })
 
   const ALLOWED_KEYS = new Set([
     'app','platform','session_minutes','sessions_today','duration_minutes',
@@ -116,7 +123,7 @@ router.post('/signal', signalLimiter, async (req, res) => {
   // but ruleScore floor below ensures the score never drops below the rule minimum.
   const ai = (planAllowsAI && ruleScore >= 20 &&
     await checkAndIncrementAiCap(row.family_id, row.plan))
-    ? await analyzeSignal(type, payload, context, messageText)
+    ? await analyzeSignal(type, payload, context)
     : null
 
   // AI can't downgrade a rule score (e.g. crisis stays at 99 even if AI returns 80)
@@ -163,10 +170,9 @@ router.post('/signal', signalLimiter, async (req, res) => {
         const guidance = guidanceAllowed
           ? await generateGuidance({
               type, level, title,
-              childAge:       row.child_age,
-              platform:       payload.app || type.split('.')[0],
+              childAge: row.child_age,
+              platform: payload.app || type.split('.')[0],
               recentCount,
-              messageContext: messageText,
             })
           : null
         if (guidance) {
@@ -193,8 +199,8 @@ router.post('/signal', signalLimiter, async (req, res) => {
 
 /* ── GET /api/signal/uninstall — called by Chrome when extension is removed ── */
 // No auth — Chrome opens this URL server-side when user uninstalls the extension.
-// Token is validated by format + DB lookup only.
-router.get('/signal/uninstall', async (req, res) => {
+// Token is validated by format + DB lookup only. Rate-limited + deduplicated.
+router.get('/signal/uninstall', uninstallLimiter, async (req, res) => {
   const APP_URL = process.env.APP_URL || 'https://sentra-peach-delta.vercel.app'
   const { token } = req.query
   if (!token || !/^[a-f0-9]{32}$/.test(token)) return res.redirect(APP_URL)
@@ -211,6 +217,15 @@ router.get('/signal/uninstall', async (req, res) => {
   `).get(token).catch(() => null)
 
   if (!row) return res.redirect(APP_URL)
+
+  // Deduplicate — don't fire if we already created an uninstall alert in the last 24h
+  const recent = await db.prepare(`
+    SELECT id FROM alerts
+    WHERE child_id = ? AND category = 'App Activity'
+      AND title LIKE '%removed%'
+      AND created_at > datetime('now', '-24 hours')
+  `).get(row.child_id).catch(() => null)
+  if (recent) return res.redirect(APP_URL)
 
   const riskScore = 95
   const title = `Sentra removed from ${row.device_name}`
